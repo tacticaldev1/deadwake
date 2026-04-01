@@ -1,5 +1,6 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
-import { GameState, InputState } from './types';
+import { GameState } from './types';
+import { InputState } from './engine';
 import { createInitialState, updateGame, renderGame } from './engine';
 import { BOAT_SKINS, loadShopState } from './shopData';
 import { BoatSkin } from './types';
