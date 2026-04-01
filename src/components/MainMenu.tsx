@@ -1,13 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { sfxButtonClick } from '../game/sfx';
 
 interface MainMenuProps {
   onPlay: () => void;
   onShop: () => void;
+  onAdmin: () => void;
   highScore: number;
   coins: number;
 }
 
-const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, highScore, coins }) => {
+const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore, coins }) => {
+  const [sailClicks, setSailClicks] = useState(0);
+
+  const handleSailClick = () => {
+    sfxButtonClick();
+    const next = sailClicks + 1;
+    if (next >= 10) {
+      setSailClicks(0);
+      onAdmin();
+      return;
+    }
+    setSailClicks(next);
+    onPlay();
+  };
+
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
       <div className="animate-fade-in flex flex-col items-center gap-8">
@@ -36,7 +52,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, highScore, coins })
         {/* Buttons */}
         <div className="flex flex-col gap-3 w-64">
           <button
-            onClick={onPlay}
+            onClick={handleSailClick}
             className="group relative px-8 py-4 bg-primary text-primary-foreground font-display text-xl font-bold rounded-lg btn-glow transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden"
           >
             <span className="relative z-10">Set Sail</span>
@@ -44,7 +60,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, highScore, coins })
           </button>
 
           <button
-            onClick={onShop}
+            onClick={() => { sfxButtonClick(); onShop(); }}
             className="px-8 py-3 bg-secondary text-secondary-foreground font-display text-lg font-semibold rounded-lg transition-all duration-300 hover:scale-105 active:scale-95 border border-border hover:border-primary/30"
           >
             Ship Shop
