@@ -26,7 +26,8 @@ const SailingGame: React.FC = () => {
   const [activeMissionDuringPlay, setActiveMissionDuringPlay] = useState<Mission | null>(null);
   const [missionCompleteDialogue, setMissionCompleteDialogue] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { gameState, startGame, stopGame } = useGameLoop(canvasRef);
+  const missionTarget = activeMissionDuringPlay?.target || null;
+  const { gameState, startGame, stopGame } = useGameLoop(canvasRef, missionTarget);
 
   // SFX triggers
   const prevCoinsRef = useRef(0);
