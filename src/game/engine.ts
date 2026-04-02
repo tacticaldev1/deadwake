@@ -198,15 +198,36 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
   if (Math.random() < 0.01 * s.difficulty) {
     const angle = Math.random() * Math.PI * 2;
     const d = spawnDist + Math.random() * 200;
-    const types: Obstacle['type'][] = ['rock', 'reef', 'boat', 'rock'];
+    const types: Obstacle['type'][] = ['rock', 'boat', 'rock', 'boat'];
     if (s.difficulty > 2) types.push('storm');
+    const type = types[Math.floor(Math.random() * types.length)];
+    const moveAngle = Math.random() * Math.PI * 2;
+    const speed = type === 'boat' ? (0.8 + Math.random() * 1.2) : 0;
     s.obstacles.push({
       x: s.boatX + Math.cos(angle) * d,
       y: s.boatY + Math.sin(angle) * d,
-      type: types[Math.floor(Math.random() * types.length)],
+      type,
       radius: 15 + Math.random() * 20,
-      rotation: Math.random() * Math.PI * 2,
+      rotation: type === 'boat' ? moveAngle : Math.random() * Math.PI * 2,
+      vx: Math.cos(moveAngle) * speed,
+      vy: Math.sin(moveAngle) * speed,
     });
+  }
+
+  // Move enemy boats
+  for (const obs of s.obstacles) {
+    if (obs.type === 'boat' && obs.vx !== undefined && obs.vy !== undefined) {
+      obs.x += obs.vx * dt * 60;
+      obs.y += obs.vy * dt * 60;
+      // Occasionally change direction
+      if (Math.random() < 0.005) {
+        const newAngle = Math.random() * Math.PI * 2;
+        const speed = Math.sqrt(obs.vx * obs.vx + obs.vy * obs.vy);
+        obs.vx = Math.cos(newAngle) * speed;
+        obs.vy = Math.sin(newAngle) * speed;
+        obs.rotation = newAngle;
+      }
+    }
   }
 
   // Generate collectibles
