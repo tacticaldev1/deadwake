@@ -29,7 +29,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     if (canvas) {
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        renderGame(ctx, stateRef.current, getSkin(), canvas.width, canvas.height);
+        renderGame(ctx, stateRef.current, getSkin(), canvas.width, canvas.height, missionTarget || undefined);
       }
     }
 
