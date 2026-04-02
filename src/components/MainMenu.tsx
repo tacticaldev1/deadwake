@@ -37,6 +37,8 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore,
             onClick={handleTitleClick}
             className="font-display text-6xl md:text-8xl font-extrabold tracking-tight text-foreground text-glow mb-2 cursor-pointer select-none"
           >
+            SAIL
+          </h1>
           <p className="font-body text-lg text-muted-foreground tracking-widest uppercase">
             Navigate the Open Sea
           </p>
