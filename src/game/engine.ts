@@ -376,9 +376,10 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, skin
     }
   }
 
-  // Draw boat
+  // Draw boat (blink when invulnerable)
   if (!state.gameOver) {
-    drawBoat(ctx, state, skin, time);
+    const showBoat = state.invulnTimer <= 0 || Math.floor(state.time * 10) % 2 === 0;
+    if (showBoat) drawBoat(ctx, state, skin, time);
   }
 
   // Draw particles (in front)
