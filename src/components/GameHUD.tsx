@@ -42,10 +42,19 @@ const GameHUD: React.FC<GameHUDProps> = ({ score, coins, distance, event, speedB
           )}
         </div>
 
-        {/* Coins */}
-        <div className="bg-card/60 backdrop-blur-sm rounded-lg px-4 py-2 border border-border/40 flex items-center gap-2">
-          <span className="text-accent text-lg">⬡</span>
-          <span className="font-display text-xl font-bold text-foreground">{coins}</span>
+        {/* Health + Coins */}
+        <div className="flex flex-col items-end gap-2">
+          <div className="bg-card/60 backdrop-blur-sm rounded-lg px-4 py-2 border border-border/40 flex items-center gap-1">
+            {Array.from({ length: maxHealth }).map((_, i) => (
+              <span key={i} className={`text-lg transition-all duration-300 ${i < health ? 'text-destructive scale-100' : 'text-muted-foreground/30 scale-75'}`}>
+                ♥
+              </span>
+            ))}
+          </div>
+          <div className="bg-card/60 backdrop-blur-sm rounded-lg px-4 py-2 border border-border/40 flex items-center gap-2">
+            <span className="text-accent text-lg">⬡</span>
+            <span className="font-display text-xl font-bold text-foreground">{coins}</span>
+          </div>
         </div>
       </div>
     </div>

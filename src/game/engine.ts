@@ -268,22 +268,31 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
   // Collision detection
   for (const obs of s.obstacles) {
     const d = dist(obs.x, obs.y, s.boatX, s.boatY);
-    if (d < obs.radius + 12) {
-      s.gameOver = true;
-      // Explosion particles
-      for (let i = 0; i < 20; i++) {
+    if (d < obs.radius + 12 && s.invulnTimer <= 0) {
+      s.health -= 1;
+      s.invulnTimer = 1.5; // 1.5s invulnerability
+      // Knockback away from obstacle
+      const knockAngle = Math.atan2(s.boatY - obs.y, s.boatX - obs.x);
+      s.boatX += Math.cos(knockAngle) * 30;
+      s.boatY += Math.sin(knockAngle) * 30;
+      s.boatSpeed *= 0.3;
+      // Hit particles
+      for (let i = 0; i < 15; i++) {
         const a = Math.random() * Math.PI * 2;
         s.particles.push({
           x: s.boatX, y: s.boatY,
           vx: Math.cos(a) * (2 + Math.random() * 3),
           vy: Math.sin(a) * (2 + Math.random() * 3),
-          life: 1.5, maxLife: 1.5,
+          life: 1.2, maxLife: 1.2,
           size: 3 + Math.random() * 5,
-          color: 'rgba(255,200,150,0.8)',
+          color: s.health <= 0 ? 'rgba(255,100,50,0.9)' : 'rgba(255,200,150,0.8)',
           alpha: 1, type: 'splash',
         });
       }
-      break;
+      if (s.health <= 0) {
+        s.gameOver = true;
+        break;
+      }
     }
   }
 
