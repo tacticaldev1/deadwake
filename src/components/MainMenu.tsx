@@ -57,7 +57,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore,
         {/* Buttons */}
         <div className="flex flex-col gap-3 w-64">
           <button
-            onClick={handleSailClick}
+            onClick={handlePlay}
             className="group relative px-8 py-4 bg-primary text-primary-foreground font-display text-xl font-bold rounded-lg btn-glow transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden"
           >
             <span className="relative z-10">Set Sail</span>
