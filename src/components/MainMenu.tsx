@@ -10,17 +10,21 @@ interface MainMenuProps {
 }
 
 const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore, coins }) => {
-  const [sailClicks, setSailClicks] = useState(0);
+  const [titleClicks, setTitleClicks] = useState(0);
 
-  const handleSailClick = () => {
-    sfxButtonClick();
-    const next = sailClicks + 1;
+  const handleTitleClick = () => {
+    const next = titleClicks + 1;
     if (next >= 10) {
-      setSailClicks(0);
+      setTitleClicks(0);
+      sfxButtonClick();
       onAdmin();
       return;
     }
-    setSailClicks(next);
+    setTitleClicks(next);
+  };
+
+  const handlePlay = () => {
+    sfxButtonClick();
     onPlay();
   };
 
