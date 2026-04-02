@@ -6,6 +6,8 @@ interface GameHUDProps {
   distance: number;
   event: 'none' | 'storm' | 'calm' | 'gust';
   speedBoost: boolean;
+  health: number;
+  maxHealth: number;
 }
 
 const eventLabels: Record<string, { text: string; color: string }> = {
