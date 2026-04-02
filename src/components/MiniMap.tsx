@@ -43,7 +43,7 @@ const MiniMap: React.FC<MiniMapProps> = ({ state }) => {
           {/* Obstacles */}
           {obstacles.filter(o => inRange(o.x, o.y)).map((o, i) => {
             const p = toMap(o.x, o.y);
-            const color = o.type === 'rock' ? '#888' : o.type === 'reef' ? '#4a8' : o.type === 'storm' ? '#446' : '#a64';
+            const color = o.type === 'rock' ? '#888' : o.type === 'storm' ? '#446' : '#a64';
             return <circle key={`o${i}`} cx={p.x} cy={p.y} r={3} fill={color} opacity={0.8} />;
           })}
 
