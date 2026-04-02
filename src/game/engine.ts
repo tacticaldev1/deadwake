@@ -338,7 +338,7 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
 
 // ============ RENDERER ============
 
-export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, skin: BoatSkin, canvasW: number, canvasH: number) {
+export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, skin: BoatSkin, canvasW: number, canvasH: number, missionTarget?: { x: number; y: number; radius: number; label: string }) {
   const { cameraX, cameraY, cameraZoom, time } = state;
   ctx.save();
   ctx.clearRect(0, 0, canvasW, canvasH);
@@ -350,6 +350,11 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, skin
 
   // Draw water
   drawWater(ctx, cameraX, cameraY, canvasW, canvasH, cameraZoom, time, state.event);
+
+  // Draw mission target beacon
+  if (missionTarget) {
+    drawMissionBeacon(ctx, missionTarget, time);
+  }
 
   // Draw wake trail
   drawWakeTrail(ctx, state.wakeTrail, skin.wakeColor);
@@ -401,8 +406,6 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, skin
     const viewH = canvasH / cameraZoom;
     ctx.fillRect(cameraX - viewW / 2, cameraY - viewH / 2, viewW, viewH);
   }
-
-  // Wind indicator (small arrow in world space - skip, do it in HUD)
 
   ctx.restore();
 
