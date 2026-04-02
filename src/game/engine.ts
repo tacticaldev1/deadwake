@@ -543,14 +543,6 @@ function drawObstacle(ctx: CanvasRenderingContext2D, obs: Obstacle, time: number
     ctx.beginPath();
     ctx.arc(0, 0, obs.radius + 5 + Math.sin(time * 2) * 3, 0, Math.PI * 2);
     ctx.stroke();
-  } else if (obs.type === 'reef') {
-    ctx.fillStyle = 'rgba(80,160,120,0.6)';
-    ctx.beginPath();
-    ctx.ellipse(0, 0, obs.radius, obs.radius * 0.6, obs.rotation, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(100,180,140,0.4)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
   } else if (obs.type === 'boat') {
     ctx.rotate(obs.rotation + Math.sin(time * 1.5) * 0.1);
     ctx.fillStyle = '#8B4513';
