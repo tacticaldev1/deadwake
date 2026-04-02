@@ -16,7 +16,7 @@ const eventLabels: Record<string, { text: string; color: string }> = {
   gust: { text: '💨 WIND GUST!', color: 'text-primary' },
 };
 
-const GameHUD: React.FC<GameHUDProps> = ({ score, coins, distance, event, speedBoost }) => {
+const GameHUD: React.FC<GameHUDProps> = ({ score, coins, distance, event, speedBoost, health, maxHealth }) => {
   const eventInfo = eventLabels[event];
 
   return (
