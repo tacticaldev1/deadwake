@@ -217,19 +217,30 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
     });
   }
 
-  // Move enemy boats
+  // Move enemy boats + pursuit AI
+  const CHASE_RANGE = 300;
+  const CHASE_SPEED = 1.8;
   for (const obs of s.obstacles) {
     if (obs.type === 'boat' && obs.vx !== undefined && obs.vy !== undefined) {
-      obs.x += obs.vx * dt * 60;
-      obs.y += obs.vy * dt * 60;
-      // Occasionally change direction
-      if (Math.random() < 0.005) {
+      const d = dist(obs.x, obs.y, s.boatX, s.boatY);
+      if (d < CHASE_RANGE) {
+        // Pursue player
+        const angleToPlayer = Math.atan2(s.boatY - obs.y, s.boatX - obs.x);
+        const pursuitStrength = 1 - d / CHASE_RANGE; // stronger when closer
+        const speed = CHASE_SPEED * (0.5 + pursuitStrength * 0.5);
+        obs.vx = lerp(obs.vx, Math.cos(angleToPlayer) * speed, 0.05);
+        obs.vy = lerp(obs.vy, Math.sin(angleToPlayer) * speed, 0.05);
+        obs.rotation = Math.atan2(obs.vy, obs.vx);
+      } else if (Math.random() < 0.005) {
+        // Random wandering
         const newAngle = Math.random() * Math.PI * 2;
         const speed = Math.sqrt(obs.vx * obs.vx + obs.vy * obs.vy);
         obs.vx = Math.cos(newAngle) * speed;
         obs.vy = Math.sin(newAngle) * speed;
         obs.rotation = newAngle;
       }
+      obs.x += obs.vx * dt * 60;
+      obs.y += obs.vy * dt * 60;
     }
   }
 
