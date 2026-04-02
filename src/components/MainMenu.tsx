@@ -33,9 +33,10 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore,
       <div className="animate-fade-in flex flex-col items-center gap-8">
         {/* Title */}
         <div className="text-center">
-          <h1 className="font-display text-6xl md:text-8xl font-extrabold tracking-tight text-foreground text-glow mb-2">
-            SAIL
-          </h1>
+          <h1
+            onClick={handleTitleClick}
+            className="font-display text-6xl md:text-8xl font-extrabold tracking-tight text-foreground text-glow mb-2 cursor-pointer select-none"
+          >
           <p className="font-body text-lg text-muted-foreground tracking-widest uppercase">
             Navigate the Open Sea
           </p>
