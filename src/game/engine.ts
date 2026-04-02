@@ -677,6 +677,50 @@ function drawCollectible(ctx: CanvasRenderingContext2D, col: Collectible, time: 
   ctx.restore();
 }
 
+function drawMissionBeacon(ctx: CanvasRenderingContext2D, target: { x: number; y: number; radius: number; label: string }, time: number) {
+  const pulse = Math.sin(time * 3) * 0.3 + 0.7;
+  
+  // Outer ring pulse
+  ctx.globalAlpha = 0.15 * pulse;
+  ctx.fillStyle = '#00BFFF';
+  ctx.beginPath();
+  ctx.arc(target.x, target.y, target.radius + 10 + Math.sin(time * 2) * 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Inner ring
+  ctx.globalAlpha = 0.3 * pulse;
+  ctx.strokeStyle = '#00BFFF';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Center diamond
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = '#00BFFF';
+  ctx.save();
+  ctx.translate(target.x, target.y);
+  ctx.rotate(time * 1.5);
+  ctx.beginPath();
+  ctx.moveTo(0, -8);
+  ctx.lineTo(6, 0);
+  ctx.lineTo(0, 8);
+  ctx.lineTo(-6, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // Label
+  ctx.globalAlpha = 0.8;
+  ctx.fillStyle = '#00BFFF';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(target.label, target.x, target.y - target.radius - 12);
+  ctx.globalAlpha = 1;
+}
+
 function drawWindIndicator(ctx: CanvasRenderingContext2D, wind: WindState, cw: number, ch: number, boatAngle: number) {
   const cx = 16 + 70; // centered above minimap (minimap is 140px wide, left-aligned at 16px)
   const cy = ch - 16 - 140 - 50; // above the minimap
