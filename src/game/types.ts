@@ -93,6 +93,9 @@ export interface GameState {
   coins: number;
   distance: number;
   gameOver: boolean;
+  health: number;
+  maxHealth: number;
+  invulnTimer: number;
   difficulty: number;
   wind: WindState;
   obstacles: Obstacle[];

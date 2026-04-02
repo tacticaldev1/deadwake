@@ -155,6 +155,8 @@ const SailingGame: React.FC = () => {
             distance={Math.floor(gameState.distance)}
             event={gameState.event}
             speedBoost={gameState.speedBoostTimer > 0}
+            health={gameState.health}
+            maxHealth={gameState.maxHealth}
           />
           <MiniMap state={gameState} />
         </>

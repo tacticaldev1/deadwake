@@ -16,6 +16,9 @@ export function createInitialState(): GameState {
     coins: 0,
     distance: 0,
     gameOver: false,
+    health: 3,
+    maxHealth: 3,
+    invulnTimer: 0,
     difficulty: 1,
     wind: { direction: -Math.PI / 4, strength: 0.5, targetDirection: -Math.PI / 4, targetStrength: 0.5 },
     obstacles: [],
@@ -133,8 +136,9 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
   // Difficulty
   s.difficulty = 1 + s.distance / 5000;
 
-  // Speed boost decay
+  // Speed boost & invuln decay
   if (s.speedBoostTimer > 0) s.speedBoostTimer -= dt;
+  if (s.invulnTimer > 0) s.invulnTimer -= dt;
 
   // Camera
   const lookAhead = 100;
@@ -214,19 +218,30 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
     });
   }
 
-  // Move enemy boats
+  // Move enemy boats + pursuit AI
+  const CHASE_RANGE = 300;
+  const CHASE_SPEED = 1.8;
   for (const obs of s.obstacles) {
     if (obs.type === 'boat' && obs.vx !== undefined && obs.vy !== undefined) {
-      obs.x += obs.vx * dt * 60;
-      obs.y += obs.vy * dt * 60;
-      // Occasionally change direction
-      if (Math.random() < 0.005) {
+      const d = dist(obs.x, obs.y, s.boatX, s.boatY);
+      if (d < CHASE_RANGE) {
+        // Pursue player
+        const angleToPlayer = Math.atan2(s.boatY - obs.y, s.boatX - obs.x);
+        const pursuitStrength = 1 - d / CHASE_RANGE; // stronger when closer
+        const speed = CHASE_SPEED * (0.5 + pursuitStrength * 0.5);
+        obs.vx = lerp(obs.vx, Math.cos(angleToPlayer) * speed, 0.05);
+        obs.vy = lerp(obs.vy, Math.sin(angleToPlayer) * speed, 0.05);
+        obs.rotation = Math.atan2(obs.vy, obs.vx);
+      } else if (Math.random() < 0.005) {
+        // Random wandering
         const newAngle = Math.random() * Math.PI * 2;
         const speed = Math.sqrt(obs.vx * obs.vx + obs.vy * obs.vy);
         obs.vx = Math.cos(newAngle) * speed;
         obs.vy = Math.sin(newAngle) * speed;
         obs.rotation = newAngle;
       }
+      obs.x += obs.vx * dt * 60;
+      obs.y += obs.vy * dt * 60;
     }
   }
 
@@ -253,22 +268,31 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
   // Collision detection
   for (const obs of s.obstacles) {
     const d = dist(obs.x, obs.y, s.boatX, s.boatY);
-    if (d < obs.radius + 12) {
-      s.gameOver = true;
-      // Explosion particles
-      for (let i = 0; i < 20; i++) {
+    if (d < obs.radius + 12 && s.invulnTimer <= 0) {
+      s.health -= 1;
+      s.invulnTimer = 1.5; // 1.5s invulnerability
+      // Knockback away from obstacle
+      const knockAngle = Math.atan2(s.boatY - obs.y, s.boatX - obs.x);
+      s.boatX += Math.cos(knockAngle) * 30;
+      s.boatY += Math.sin(knockAngle) * 30;
+      s.boatSpeed *= 0.3;
+      // Hit particles
+      for (let i = 0; i < 15; i++) {
         const a = Math.random() * Math.PI * 2;
         s.particles.push({
           x: s.boatX, y: s.boatY,
           vx: Math.cos(a) * (2 + Math.random() * 3),
           vy: Math.sin(a) * (2 + Math.random() * 3),
-          life: 1.5, maxLife: 1.5,
+          life: 1.2, maxLife: 1.2,
           size: 3 + Math.random() * 5,
-          color: 'rgba(255,200,150,0.8)',
+          color: s.health <= 0 ? 'rgba(255,100,50,0.9)' : 'rgba(255,200,150,0.8)',
           alpha: 1, type: 'splash',
         });
       }
-      break;
+      if (s.health <= 0) {
+        s.gameOver = true;
+        break;
+      }
     }
   }
 
@@ -352,9 +376,10 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, skin
     }
   }
 
-  // Draw boat
+  // Draw boat (blink when invulnerable)
   if (!state.gameOver) {
-    drawBoat(ctx, state, skin, time);
+    const showBoat = state.invulnTimer <= 0 || Math.floor(state.time * 10) % 2 === 0;
+    if (showBoat) drawBoat(ctx, state, skin, time);
   }
 
   // Draw particles (in front)
