@@ -136,8 +136,9 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
   // Difficulty
   s.difficulty = 1 + s.distance / 5000;
 
-  // Speed boost decay
+  // Speed boost & invuln decay
   if (s.speedBoostTimer > 0) s.speedBoostTimer -= dt;
+  if (s.invulnTimer > 0) s.invulnTimer -= dt;
 
   // Camera
   const lookAhead = 100;
