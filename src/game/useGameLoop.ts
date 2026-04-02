@@ -5,7 +5,7 @@ import { createInitialState, updateGame, renderGame } from './engine';
 import { BOAT_SKINS, loadShopState } from './shopData';
 import { BoatSkin } from './types';
 
-export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
+export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>, missionTarget?: { x: number; y: number; radius: number; label: string } | null) {
   const stateRef = useRef<GameState>(createInitialState());
   const inputRef = useRef<InputState>({ up: false, down: false, left: false, right: false, mouseAngle: null });
   const rafRef = useRef<number>(0);
@@ -29,7 +29,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     if (canvas) {
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        renderGame(ctx, stateRef.current, getSkin(), canvas.width, canvas.height);
+        renderGame(ctx, stateRef.current, getSkin(), canvas.width, canvas.height, missionTarget || undefined);
       }
     }
 

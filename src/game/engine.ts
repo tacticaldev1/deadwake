@@ -338,7 +338,7 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
 
 // ============ RENDERER ============
 
-export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, skin: BoatSkin, canvasW: number, canvasH: number) {
+export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, skin: BoatSkin, canvasW: number, canvasH: number, missionTarget?: { x: number; y: number; radius: number; label: string }) {
   const { cameraX, cameraY, cameraZoom, time } = state;
   ctx.save();
   ctx.clearRect(0, 0, canvasW, canvasH);
@@ -350,6 +350,11 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, skin
 
   // Draw water
   drawWater(ctx, cameraX, cameraY, canvasW, canvasH, cameraZoom, time, state.event);
+
+  // Draw mission target beacon
+  if (missionTarget) {
+    drawMissionBeacon(ctx, missionTarget, time);
+  }
 
   // Draw wake trail
   drawWakeTrail(ctx, state.wakeTrail, skin.wakeColor);
@@ -401,8 +406,6 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, skin
     const viewH = canvasH / cameraZoom;
     ctx.fillRect(cameraX - viewW / 2, cameraY - viewH / 2, viewW, viewH);
   }
-
-  // Wind indicator (small arrow in world space - skip, do it in HUD)
 
   ctx.restore();
 
@@ -672,6 +675,50 @@ function drawCollectible(ctx: CanvasRenderingContext2D, col: Collectible, time: 
   }
 
   ctx.restore();
+}
+
+function drawMissionBeacon(ctx: CanvasRenderingContext2D, target: { x: number; y: number; radius: number; label: string }, time: number) {
+  const pulse = Math.sin(time * 3) * 0.3 + 0.7;
+  
+  // Outer ring pulse
+  ctx.globalAlpha = 0.15 * pulse;
+  ctx.fillStyle = '#00BFFF';
+  ctx.beginPath();
+  ctx.arc(target.x, target.y, target.radius + 10 + Math.sin(time * 2) * 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Inner ring
+  ctx.globalAlpha = 0.3 * pulse;
+  ctx.strokeStyle = '#00BFFF';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Center diamond
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = '#00BFFF';
+  ctx.save();
+  ctx.translate(target.x, target.y);
+  ctx.rotate(time * 1.5);
+  ctx.beginPath();
+  ctx.moveTo(0, -8);
+  ctx.lineTo(6, 0);
+  ctx.lineTo(0, 8);
+  ctx.lineTo(-6, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // Label
+  ctx.globalAlpha = 0.8;
+  ctx.fillStyle = '#00BFFF';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(target.label, target.x, target.y - target.radius - 12);
+  ctx.globalAlpha = 1;
 }
 
 function drawWindIndicator(ctx: CanvasRenderingContext2D, wind: WindState, cw: number, ch: number, boatAngle: number) {

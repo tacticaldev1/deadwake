@@ -49,7 +49,7 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ score, coins, distance,
             onClick={onMenu}
             className="px-6 py-3 bg-secondary text-secondary-foreground font-display text-base font-semibold rounded-lg transition-all duration-300 hover:scale-105 active:scale-95 border border-border"
           >
-            Main Menu
+            Return to Port
           </button>
         </div>
       </div>

@@ -37,10 +37,10 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore,
             onClick={handleTitleClick}
             className="font-display text-6xl md:text-8xl font-extrabold tracking-tight text-foreground text-glow mb-2 cursor-pointer select-none"
           >
-            SAIL
+            DEADWAKE
           </h1>
           <p className="font-body text-lg text-muted-foreground tracking-widest uppercase">
-            Navigate the Open Sea
+            Inherit the Tide
           </p>
         </div>
 
@@ -62,7 +62,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore,
             onClick={handlePlay}
             className="group relative px-8 py-4 bg-primary text-primary-foreground font-display text-xl font-bold rounded-lg btn-glow transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden"
           >
-            <span className="relative z-10">Set Sail</span>
+            <span className="relative z-10">Begin Voyage</span>
             <div className="absolute inset-0 bg-gradient-to-r from-primary to-ocean-light opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </button>
 
