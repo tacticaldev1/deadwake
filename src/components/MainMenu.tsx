@@ -10,17 +10,21 @@ interface MainMenuProps {
 }
 
 const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore, coins }) => {
-  const [sailClicks, setSailClicks] = useState(0);
+  const [titleClicks, setTitleClicks] = useState(0);
 
-  const handleSailClick = () => {
-    sfxButtonClick();
-    const next = sailClicks + 1;
+  const handleTitleClick = () => {
+    const next = titleClicks + 1;
     if (next >= 10) {
-      setSailClicks(0);
+      setTitleClicks(0);
+      sfxButtonClick();
       onAdmin();
       return;
     }
-    setSailClicks(next);
+    setTitleClicks(next);
+  };
+
+  const handlePlay = () => {
+    sfxButtonClick();
     onPlay();
   };
 
@@ -29,7 +33,10 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore,
       <div className="animate-fade-in flex flex-col items-center gap-8">
         {/* Title */}
         <div className="text-center">
-          <h1 className="font-display text-6xl md:text-8xl font-extrabold tracking-tight text-foreground text-glow mb-2">
+          <h1
+            onClick={handleTitleClick}
+            className="font-display text-6xl md:text-8xl font-extrabold tracking-tight text-foreground text-glow mb-2 cursor-pointer select-none"
+          >
             SAIL
           </h1>
           <p className="font-body text-lg text-muted-foreground tracking-widest uppercase">
@@ -52,7 +59,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore,
         {/* Buttons */}
         <div className="flex flex-col gap-3 w-64">
           <button
-            onClick={handleSailClick}
+            onClick={handlePlay}
             className="group relative px-8 py-4 bg-primary text-primary-foreground font-display text-xl font-bold rounded-lg btn-glow transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden"
           >
             <span className="relative z-10">Set Sail</span>

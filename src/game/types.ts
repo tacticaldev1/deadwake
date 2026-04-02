@@ -38,10 +38,12 @@ export interface TrailEffect {
 export interface Obstacle {
   x: number;
   y: number;
-  type: 'rock' | 'reef' | 'boat' | 'storm';
+  type: 'rock' | 'boat' | 'storm';
   radius: number;
   rotation: number;
   health?: number;
+  vx?: number;
+  vy?: number;
 }
 
 export interface Collectible {
