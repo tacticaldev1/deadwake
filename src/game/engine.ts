@@ -637,8 +637,8 @@ function drawCollectible(ctx: CanvasRenderingContext2D, col: Collectible, time: 
 }
 
 function drawWindIndicator(ctx: CanvasRenderingContext2D, wind: WindState, cw: number, ch: number, boatAngle: number) {
-  const cx = cw - 60;
-  const cy = 60;
+  const cx = 16 + 70; // centered above minimap (minimap is 140px wide, left-aligned at 16px)
+  const cy = ch - 16 - 140 - 50; // above the minimap
   const r = 25;
 
   ctx.save();
