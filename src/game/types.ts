@@ -126,4 +126,4 @@ export interface ShopState {
   highScore: number;
 }
 
-export type GameScreen = 'menu' | 'port' | 'playing' | 'gameover' | 'shop' | 'settings';
+export type GameScreen = 'menu' | 'house' | 'port' | 'playing' | 'gameover' | 'shop' | 'settings';

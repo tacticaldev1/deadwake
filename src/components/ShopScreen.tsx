@@ -17,7 +17,6 @@ const ShopScreen: React.FC<ShopScreenProps> = ({ shop, onUpdate, onBack }) => {
     const key = type === 'skins' ? 'unlockedSkins' : type === 'sails' ? 'unlockedSails' : 'unlockedTrails';
     const selectKey = type === 'skins' ? 'selectedSkin' : type === 'sails' ? 'selectedSail' : 'selectedTrail';
     const updated = { ...shop };
-
     if (!updated[key].includes(id)) {
       if (updated.coins < price) return;
       updated.coins -= price;
@@ -29,26 +28,25 @@ const ShopScreen: React.FC<ShopScreenProps> = ({ shop, onUpdate, onBack }) => {
 
   return (
     <div className="absolute inset-0 flex items-center justify-center z-20">
-      <div className="animate-scale-in bg-card/90 backdrop-blur-md rounded-2xl p-6 md:p-8 border border-border/50 card-glow max-w-lg w-full mx-4 max-h-[85vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <button onClick={onBack} className="text-muted-foreground hover:text-foreground transition-colors font-body text-sm">
-            ← Back
+      <div className="absolute inset-0 scanlines opacity-15" />
+      <div className="animate-fade-in pixel-border bg-card/95 p-4 md:p-6 max-w-sm w-full mx-4 max-h-[85vh] flex flex-col relative z-10">
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={onBack} className="font-body text-sm text-muted-foreground hover:text-foreground transition-colors">
+            [back]
           </button>
-          <h2 className="font-display text-2xl font-bold text-foreground">Ship Shop</h2>
-          <div className="flex items-center gap-1 text-accent font-display font-bold">
-            <span>⬡</span> {shop.coins}
+          <h2 className="font-display text-[10px] text-foreground">SHIP SHOP</h2>
+          <div className="flex items-center gap-1 font-body text-sm text-accent">
+            ◆ {shop.coins}
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 mb-4 bg-secondary/50 rounded-lg p-1">
+        <div className="flex gap-0 mb-4 pixel-border">
           {(['boats', 'sails', 'trails'] as ShopTab[]).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`flex-1 py-2 px-3 rounded-md font-display text-sm font-semibold transition-all duration-200 capitalize ${
-                tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+              className={`flex-1 py-2 px-2 font-display text-[7px] transition-colors uppercase ${
+                tab === t ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'
               }`}
             >
               {t}
@@ -56,26 +54,19 @@ const ShopScreen: React.FC<ShopScreenProps> = ({ shop, onUpdate, onBack }) => {
           ))}
         </div>
 
-        {/* Items */}
         <div className="flex-1 overflow-y-auto space-y-2 pr-1">
           {tab === 'boats' && BOAT_SKINS.map(skin => {
             const owned = shop.unlockedSkins.includes(skin.id);
             const selected = shop.selectedSkin === skin.id;
             return (
-              <ShopItem
-                key={skin.id}
-                name={skin.name}
-                description={skin.description}
-                price={skin.price}
-                owned={owned}
-                selected={selected}
+              <ShopItem key={skin.id} name={skin.name} description={skin.description}
+                price={skin.price} owned={owned} selected={selected}
                 canAfford={shop.coins >= skin.price}
                 onSelect={() => buyAndSelect('skins', skin.id, skin.price)}
                 preview={
                   <div className="flex gap-1">
-                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: skin.hullColor }} />
-                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: skin.sailColor }} />
-                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: skin.accentColor }} />
+                    <div className="w-3 h-3" style={{ backgroundColor: skin.hullColor }} />
+                    <div className="w-3 h-3" style={{ backgroundColor: skin.sailColor }} />
                   </div>
                 }
               />
@@ -85,19 +76,14 @@ const ShopScreen: React.FC<ShopScreenProps> = ({ shop, onUpdate, onBack }) => {
             const owned = shop.unlockedSails.includes(sail.id);
             const selected = shop.selectedSail === sail.id;
             return (
-              <ShopItem
-                key={sail.id}
-                name={sail.name}
-                description={sail.description}
-                price={sail.price}
-                owned={owned}
-                selected={selected}
+              <ShopItem key={sail.id} name={sail.name} description={sail.description}
+                price={sail.price} owned={owned} selected={selected}
                 canAfford={shop.coins >= sail.price}
                 onSelect={() => buyAndSelect('sails', sail.id, sail.price)}
                 preview={
                   <div className="flex gap-1">
                     {sail.colors.map((c, i) => (
-                      <div key={i} className="w-4 h-4 rounded-full" style={{ backgroundColor: c }} />
+                      <div key={i} className="w-3 h-3" style={{ backgroundColor: c }} />
                     ))}
                   </div>
                 }
@@ -108,18 +94,11 @@ const ShopScreen: React.FC<ShopScreenProps> = ({ shop, onUpdate, onBack }) => {
             const owned = shop.unlockedTrails.includes(trail.id);
             const selected = shop.selectedTrail === trail.id;
             return (
-              <ShopItem
-                key={trail.id}
-                name={trail.name}
-                description={trail.description}
-                price={trail.price}
-                owned={owned}
-                selected={selected}
+              <ShopItem key={trail.id} name={trail.name} description={trail.description}
+                price={trail.price} owned={owned} selected={selected}
                 canAfford={shop.coins >= trail.price}
                 onSelect={() => buyAndSelect('trails', trail.id, trail.price)}
-                preview={
-                  <div className="w-8 h-4 rounded-full" style={{ backgroundColor: trail.particleColor }} />
-                }
+                preview={<div className="w-6 h-3" style={{ backgroundColor: trail.particleColor }} />}
               />
             );
           })}
@@ -130,42 +109,32 @@ const ShopScreen: React.FC<ShopScreenProps> = ({ shop, onUpdate, onBack }) => {
 };
 
 interface ShopItemProps {
-  name: string;
-  description: string;
-  price: number;
-  owned: boolean;
-  selected: boolean;
-  canAfford: boolean;
-  onSelect: () => void;
-  preview: React.ReactNode;
+  name: string; description: string; price: number;
+  owned: boolean; selected: boolean; canAfford: boolean;
+  onSelect: () => void; preview: React.ReactNode;
 }
 
 const ShopItem: React.FC<ShopItemProps> = ({ name, description, price, owned, selected, canAfford, onSelect, preview }) => (
   <button
     onClick={onSelect}
     disabled={!owned && !canAfford}
-    className={`w-full flex items-center gap-4 p-3 rounded-lg transition-all duration-200 text-left ${
-      selected
-        ? 'bg-primary/15 border border-primary/40'
-        : owned
-        ? 'bg-secondary/30 border border-border/30 hover:border-primary/20'
-        : canAfford
-        ? 'bg-secondary/20 border border-border/20 hover:border-accent/30'
-        : 'bg-secondary/10 border border-border/10 opacity-50 cursor-not-allowed'
+    className={`w-full flex items-center gap-3 p-2 transition-colors text-left ${
+      selected ? 'pixel-border bg-primary/10' : owned ? 'pixel-border bg-secondary/20' :
+      canAfford ? 'pixel-border bg-secondary/10 hover:bg-secondary/20' : 'pixel-border bg-secondary/5 opacity-40 cursor-not-allowed'
     }`}
   >
     <div className="shrink-0">{preview}</div>
     <div className="flex-1 min-w-0">
-      <div className="font-display text-sm font-semibold text-foreground">{name}</div>
-      <div className="text-xs text-muted-foreground font-body truncate">{description}</div>
+      <div className="font-display text-[7px] text-foreground">{name}</div>
+      <div className="font-body text-xs text-muted-foreground truncate">{description}</div>
     </div>
     <div className="shrink-0 text-right">
       {selected ? (
-        <span className="text-xs font-display font-bold text-primary">EQUIPPED</span>
+        <span className="font-display text-[7px] text-primary">[ON]</span>
       ) : owned ? (
-        <span className="text-xs font-display text-muted-foreground">OWNED</span>
+        <span className="font-display text-[7px] text-muted-foreground">[OK]</span>
       ) : (
-        <span className="text-xs font-display font-bold text-accent">⬡ {price}</span>
+        <span className="font-body text-xs text-accent">◆{price}</span>
       )}
     </div>
   </button>

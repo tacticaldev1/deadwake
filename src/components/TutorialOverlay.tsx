@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 interface TutorialOverlayProps {
   onDismiss: () => void;
@@ -6,24 +6,24 @@ interface TutorialOverlayProps {
 
 const steps = [
   {
-    title: 'Welcome, Captain!',
-    desc: 'Navigate the open sea, avoid obstacles, and collect treasure.',
-    icon: '⛵',
+    title: 'WELCOME, CAPTAIN',
+    desc: 'Navigate the dark waters. Avoid what lurks beneath.',
+    icon: '~',
   },
   {
-    title: 'Controls',
-    desc: 'Use WASD or Arrow Keys to steer. W/↑ to accelerate, A/D or ←/→ to turn. You can also click and drag to steer.',
-    icon: '🎮',
+    title: 'CONTROLS',
+    desc: 'WASD or Arrows to steer. W to accelerate. Click/drag to aim.',
+    icon: '>',
   },
   {
-    title: 'Watch the Wind',
-    desc: 'The wind indicator (top right) shows wind direction. Sailing with the wind is faster — sailing against it slows you down.',
-    icon: '💨',
+    title: 'THE WIND',
+    desc: 'Wind affects your speed. Sail with it, not against it.',
+    icon: '=',
   },
   {
-    title: 'Collect & Avoid',
-    desc: 'Grab coins ⬡ and crates for currency. Pick up blue arrows for speed boosts. Avoid rocks, reefs, boats, and storms!',
-    icon: '💰',
+    title: 'SURVIVE',
+    desc: 'Collect coins. Grab crates. Avoid rocks and enemy ships.',
+    icon: '!',
   },
 ];
 
@@ -49,31 +49,31 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onDismiss }) => {
 
   return (
     <div
-      className={`absolute inset-0 z-30 flex items-center justify-center bg-background/70 backdrop-blur-sm transition-opacity duration-300 ${
+      className={`absolute inset-0 z-30 flex items-center justify-center bg-background/80 transition-opacity duration-300 ${
         visible ? 'opacity-100' : 'opacity-0'
       }`}
     >
-      <div className="animate-scale-in bg-card/90 backdrop-blur-md rounded-2xl p-8 md:p-10 border border-border/50 card-glow max-w-md w-full mx-4 text-center">
-        <div className="text-5xl mb-4">{current.icon}</div>
-        <h2 className="font-display text-2xl font-bold text-foreground mb-3">{current.title}</h2>
+      <div className="absolute inset-0 scanlines opacity-20" />
+      <div className="animate-fade-in pixel-border bg-card/95 p-6 md:p-8 max-w-xs w-full mx-4 text-center relative z-10">
+        <div className="font-display text-lg text-primary mb-4">{current.icon}</div>
+        <h2 className="font-display text-[10px] text-foreground mb-3">{current.title}</h2>
         <p className="font-body text-sm text-muted-foreground leading-relaxed mb-6">{current.desc}</p>
 
         <div className="flex items-center justify-between">
           <button
             onClick={skip}
-            className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors font-body"
+            className="font-body text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
           >
-            Skip tutorial
+            [skip]
           </button>
 
-          <div className="flex items-center gap-4">
-            {/* Dots */}
-            <div className="flex gap-1.5">
+          <div className="flex items-center gap-3">
+            <div className="flex gap-1">
               {steps.map((_, i) => (
                 <div
                   key={i}
-                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                    i === step ? 'bg-primary scale-125' : i < step ? 'bg-primary/40' : 'bg-border'
+                  className={`w-2 h-2 transition-colors ${
+                    i === step ? 'bg-primary' : i < step ? 'bg-primary/30' : 'bg-border'
                   }`}
                 />
               ))}
@@ -81,9 +81,9 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onDismiss }) => {
 
             <button
               onClick={next}
-              className="px-5 py-2 bg-primary text-primary-foreground font-display text-sm font-bold rounded-lg btn-glow transition-all duration-200 hover:scale-105 active:scale-95"
+              className="px-4 py-2 bg-primary text-primary-foreground font-display text-[8px] pixel-btn transition-colors hover:bg-primary/80"
             >
-              {step < steps.length - 1 ? 'Next' : 'Let\'s Sail!'}
+              {step < steps.length - 1 ? 'NEXT' : 'SAIL'}
             </button>
           </div>
         </div>

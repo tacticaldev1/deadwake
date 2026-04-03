@@ -11,9 +11,9 @@ interface GameHUDProps {
 }
 
 const eventLabels: Record<string, { text: string; color: string }> = {
-  storm: { text: '⛈ STORM', color: 'text-destructive' },
-  calm: { text: '🌊 CALM WIND', color: 'text-muted-foreground' },
-  gust: { text: '💨 WIND GUST!', color: 'text-primary' },
+  storm: { text: '~ STORM ~', color: 'text-destructive' },
+  calm: { text: '~ CALM ~', color: 'text-muted-foreground' },
+  gust: { text: '~ GUST ~', color: 'text-primary' },
 };
 
 const GameHUD: React.FC<GameHUDProps> = ({ score, coins, distance, event, speedBoost, health, maxHealth }) => {
@@ -21,39 +21,39 @@ const GameHUD: React.FC<GameHUDProps> = ({ score, coins, distance, event, speedB
 
   return (
     <div className="absolute inset-x-0 top-0 z-10 pointer-events-none">
-      <div className="flex items-start justify-between p-4 md:p-6">
+      <div className="flex items-start justify-between p-3 md:p-4">
         {/* Score */}
-        <div className="bg-card/60 backdrop-blur-sm rounded-lg px-4 py-2 border border-border/40">
-          <div className="font-display text-2xl font-bold text-foreground">{score}</div>
-          <div className="text-xs text-muted-foreground font-body">{distance}m</div>
+        <div className="pixel-border bg-card/80 px-3 py-2">
+          <div className="font-display text-sm text-foreground">{score}</div>
+          <div className="font-body text-sm text-muted-foreground">{distance}m</div>
         </div>
 
         {/* Event + Boost */}
         <div className="flex flex-col items-center gap-2">
           {eventInfo && (
-            <div className={`bg-card/60 backdrop-blur-sm rounded-lg px-3 py-1 border border-border/40 text-sm font-display font-semibold animate-fade-in ${eventInfo.color}`}>
+            <div className={`pixel-border bg-card/80 px-3 py-1 font-display text-[8px] animate-fade-in ${eventInfo.color}`}>
               {eventInfo.text}
             </div>
           )}
           {speedBoost && (
-            <div className="bg-primary/20 backdrop-blur-sm rounded-lg px-3 py-1 border border-primary/40 text-sm font-display font-bold text-primary animate-scale-in">
-              ⚡ BOOST
+            <div className="pixel-border bg-primary/20 px-3 py-1 font-display text-[8px] text-primary animate-fade-in">
+              &gt;&gt; BOOST &lt;&lt;
             </div>
           )}
         </div>
 
         {/* Health + Coins */}
         <div className="flex flex-col items-end gap-2">
-          <div className="bg-card/60 backdrop-blur-sm rounded-lg px-4 py-2 border border-border/40 flex items-center gap-1">
+          <div className="pixel-border bg-card/80 px-3 py-2 flex items-center gap-1">
             {Array.from({ length: maxHealth }).map((_, i) => (
-              <span key={i} className={`text-lg transition-all duration-300 ${i < health ? 'text-destructive scale-100' : 'text-muted-foreground/30 scale-75'}`}>
+              <span key={i} className={`font-body text-lg transition-all duration-200 ${i < health ? 'text-destructive' : 'text-muted-foreground/20'}`}>
                 ♥
               </span>
             ))}
           </div>
-          <div className="bg-card/60 backdrop-blur-sm rounded-lg px-4 py-2 border border-border/40 flex items-center gap-2">
-            <span className="text-accent text-lg">⬡</span>
-            <span className="font-display text-xl font-bold text-foreground">{coins}</span>
+          <div className="pixel-border bg-card/80 px-3 py-2 flex items-center gap-2">
+            <span className="text-accent font-body text-lg">◆</span>
+            <span className="font-display text-xs text-foreground">{coins}</span>
           </div>
         </div>
       </div>

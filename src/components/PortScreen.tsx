@@ -20,9 +20,9 @@ interface PortScreenProps {
 type PortTab = 'dock' | 'missions' | 'npcs';
 
 const PORT_NPCS = [
-  { id: 'friend', name: 'Kai', emoji: '🧑‍🦱', role: 'Old Friend', dialogue: 'intro', description: 'Your childhood friend. Knows the waters well.' },
-  { id: 'mechanic', name: 'Old Mara', emoji: '🔧', role: 'Dock Mechanic', dialogue: 'mechanic_first', description: 'Keeps every boat in the harbor seaworthy.' },
-  { id: 'trader', name: 'Naveen', emoji: '🏪', role: 'Trader', dialogue: 'trader_first', description: 'Runs the local trade post. Always has cargo.' },
+  { id: 'friend', name: 'Kai', emoji: '>', role: 'Old Friend', dialogue: 'intro', description: 'Knows the waters well.' },
+  { id: 'mechanic', name: 'Old Mara', emoji: '#', role: 'Mechanic', dialogue: 'mechanic_first', description: 'Keeps boats seaworthy.' },
+  { id: 'trader', name: 'Naveen', emoji: '$', role: 'Trader', dialogue: 'trader_first', description: 'Always has cargo.' },
 ];
 
 const PortScreen: React.FC<PortScreenProps> = ({
@@ -42,10 +42,6 @@ const PortScreen: React.FC<PortScreenProps> = ({
   const handleDialogueComplete = (action?: string) => {
     if (firstVisit) onFirstVisitDone();
     setActiveDialogue(null);
-
-    if (action === 'unlock_first_mission' || action === 'unlock_delivery') {
-      // Missions are already available
-    }
   };
 
   const handleTalkToNPC = (npcId: string, dialogueId: string) => {
@@ -77,85 +73,79 @@ const PortScreen: React.FC<PortScreenProps> = ({
 
   return (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center">
-      {/* Port background overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-card/80 to-background" />
+      <div className="absolute inset-0 bg-background" />
+      <div className="absolute inset-0 scanlines opacity-15" />
 
-      <div className="relative z-10 flex flex-col items-center gap-4 w-full max-w-md px-4 animate-fade-in">
+      <div className="relative z-10 flex flex-col items-center gap-4 w-full max-w-sm px-4 animate-fade-in">
         {/* Port title */}
         <div className="text-center mb-2">
-          <h2 className="font-display text-3xl md:text-4xl font-extrabold text-foreground text-glow">
-            ⚓ Haven Port
+          <h2 className="font-display text-sm md:text-base text-foreground text-glow">
+            HAVEN PORT
           </h2>
-          <p className="font-body text-sm text-muted-foreground mt-1">Your father's home harbor</p>
+          <p className="font-body text-sm text-muted-foreground mt-1">Father's home harbor</p>
         </div>
 
         {/* Stats bar */}
-        <div className="flex gap-4 text-sm text-muted-foreground font-body">
+        <div className="flex gap-4 font-body text-sm text-muted-foreground">
           <div className="flex items-center gap-1">
-            <span className="text-accent gold-glow">⬡</span>
+            <span className="text-accent gold-glow">◆</span>
             <span>{shop.coins} coins</span>
           </div>
           {missionState.activeMission && (
             <div className="flex items-center gap-1">
-              <span className="text-primary">◉</span>
-              <span className="text-primary font-semibold">{missionState.activeMission.title}</span>
+              <span className="text-primary">●</span>
+              <span className="text-primary">{missionState.activeMission.title}</span>
             </div>
           )}
         </div>
 
         {/* Tab navigation */}
-        <div className="flex gap-1 bg-secondary/50 rounded-lg p-1 w-full">
+        <div className="flex gap-0 w-full pixel-border">
           {(['dock', 'missions', 'npcs'] as PortTab[]).map(t => (
             <button
               key={t}
               onClick={() => { sfxButtonClick(); setTab(t); }}
-              className={`flex-1 py-2 px-3 rounded-md font-display text-sm font-semibold transition-all duration-200 ${
+              className={`flex-1 py-2 px-2 font-display text-[8px] transition-colors ${
                 tab === t
-                  ? 'bg-primary text-primary-foreground shadow-md'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-card text-muted-foreground hover:text-foreground'
               }`}
             >
-              {t === 'dock' ? '⚓ Dock' : t === 'missions' ? '📋 Missions' : '👥 NPCs'}
+              {t === 'dock' ? 'DOCK' : t === 'missions' ? 'MISSIONS' : 'NPCS'}
             </button>
           ))}
         </div>
 
         {/* Tab content */}
-        <div className="w-full min-h-[240px]">
+        <div className="w-full min-h-[220px]">
           {tab === 'dock' && (
             <div className="flex flex-col gap-3 animate-fade-in">
               <button
                 onClick={handleSetSail}
-                className="group relative px-6 py-4 bg-primary text-primary-foreground font-display text-lg font-bold rounded-lg btn-glow transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden"
+                className="px-4 py-3 bg-primary text-primary-foreground font-display text-[10px] pixel-btn transition-colors hover:bg-primary/80"
               >
-                <span className="relative z-10">
-                  {missionState.activeMission ? `⛵ Set Sail — ${missionState.activeMission.title}` : '⛵ Free Sail'}
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-primary to-ocean-light opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                {missionState.activeMission ? `SET SAIL - ${missionState.activeMission.title}` : 'FREE SAIL'}
               </button>
 
               <button
                 onClick={() => { sfxButtonClick(); onShop(); }}
-                className="px-6 py-3 bg-secondary text-secondary-foreground font-display text-base font-semibold rounded-lg transition-all duration-300 hover:scale-105 active:scale-95 border border-border hover:border-primary/30"
+                className="px-4 py-3 bg-secondary text-secondary-foreground font-display text-[10px] pixel-btn transition-colors hover:bg-secondary/80 border border-border"
               >
-                🔧 Ship Upgrades
+                SHIP UPGRADES
               </button>
 
-              <div className="bg-card/60 rounded-lg p-3 border border-border/40 mt-2">
-                <p className="text-xs text-muted-foreground font-body text-center">
+              <div className="pixel-border bg-card/60 p-3 mt-2">
+                <p className="font-body text-sm text-muted-foreground text-center">
                   {missionState.activeMission
-                    ? `Active mission: ${missionState.activeMission.description}`
-                    : 'No active mission. Check the mission board or talk to the locals.'}
+                    ? `Active: ${missionState.activeMission.description}`
+                    : 'No active mission. Check the board or talk to locals.'}
                 </p>
               </div>
             </div>
           )}
 
           {tab === 'missions' && (
-            <MissionBoard
-              missionState={missionState}
-              onAccept={handleAcceptMission}
-            />
+            <MissionBoard missionState={missionState} onAccept={handleAcceptMission} />
           )}
 
           {tab === 'npcs' && (
@@ -164,19 +154,19 @@ const PortScreen: React.FC<PortScreenProps> = ({
                 <button
                   key={npc.id}
                   onClick={() => handleTalkToNPC(npc.id, npc.dialogue)}
-                  className="flex items-center gap-3 p-3 bg-card/60 rounded-lg border border-border/40 hover:border-primary/30 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] text-left"
+                  className="flex items-center gap-3 p-3 pixel-border bg-card/60 hover:bg-card/80 transition-colors text-left"
                 >
-                  <span className="text-2xl">{npc.emoji}</span>
+                  <span className="font-display text-xs text-primary w-6 text-center">{npc.emoji}</span>
                   <div className="flex-1">
-                    <div className="font-display font-bold text-foreground text-sm">
+                    <div className="font-display text-[8px] text-foreground">
                       {npc.name}
                       {!talkedTo.has(npc.id) && (
-                        <span className="ml-2 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">NEW</span>
+                        <span className="ml-2 font-body text-xs text-primary">[NEW]</span>
                       )}
                     </div>
-                    <div className="text-xs text-muted-foreground">{npc.role} — {npc.description}</div>
+                    <div className="font-body text-xs text-muted-foreground">{npc.role} - {npc.description}</div>
                   </div>
-                  <span className="text-muted-foreground/40">▸</span>
+                  <span className="font-body text-muted-foreground/40">▸</span>
                 </button>
               ))}
             </div>
@@ -184,7 +174,6 @@ const PortScreen: React.FC<PortScreenProps> = ({
         </div>
       </div>
 
-      {/* Dialogue overlay */}
       {activeDialogue && (
         <DialogueBox sequence={activeDialogue} onComplete={handleDialogueComplete} />
       )}
