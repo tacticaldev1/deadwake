@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { sfxButtonClick } from '../game/sfx';
 
 interface MainMenuProps {
@@ -11,6 +11,12 @@ interface MainMenuProps {
 
 const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore, coins }) => {
   const [titleClicks, setTitleClicks] = useState(0);
+  const [flickerPhase, setFlickerPhase] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => setFlickerPhase(p => p + 1), 200);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleTitleClick = () => {
     const next = titleClicks + 1;
@@ -28,14 +34,19 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore,
     onPlay();
   };
 
+  const glowOpacity = Math.sin(flickerPhase * 0.3) * 0.1 + 0.9;
+
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-      <div className="animate-fade-in flex flex-col items-center gap-8">
+      {/* Scanlines */}
+      <div className="absolute inset-0 scanlines opacity-20" />
+      
+      <div className="animate-fade-in flex flex-col items-center gap-6 relative z-10">
         {/* Title */}
-        <div className="text-center">
+        <div className="text-center" style={{ opacity: glowOpacity }}>
           <h1
             onClick={handleTitleClick}
-            className="font-display text-6xl md:text-8xl font-extrabold tracking-tight text-foreground text-glow mb-2 cursor-pointer select-none"
+            className="font-display text-2xl md:text-4xl font-bold tracking-wide text-foreground text-glow mb-3 cursor-pointer select-none"
           >
             DEADWAKE
           </h1>
@@ -44,10 +55,17 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore,
           </p>
         </div>
 
+        {/* Pixel divider */}
+        <div className="flex gap-1">
+          {[...Array(7)].map((_, i) => (
+            <div key={i} className="w-2 h-2 bg-primary/30" />
+          ))}
+        </div>
+
         {/* Stats */}
         <div className="flex gap-6 text-sm text-muted-foreground font-body">
           <div className="flex items-center gap-2">
-            <span className="text-accent gold-glow">⬡</span>
+            <span className="text-accent gold-glow">◆</span>
             <span>{coins} coins</span>
           </div>
           <div className="flex items-center gap-2">
@@ -57,26 +75,26 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore,
         </div>
 
         {/* Buttons */}
-        <div className="flex flex-col gap-3 w-64">
+        <div className="flex flex-col gap-3 w-56">
           <button
             onClick={handlePlay}
-            className="group relative px-8 py-4 bg-primary text-primary-foreground font-display text-xl font-bold rounded-lg btn-glow transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden"
+            className="px-6 py-3 bg-primary text-primary-foreground font-display text-xs font-bold pixel-btn transition-colors hover:bg-primary/80"
           >
-            <span className="relative z-10">Begin Voyage</span>
-            <div className="absolute inset-0 bg-gradient-to-r from-primary to-ocean-light opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            BEGIN VOYAGE
           </button>
 
           <button
             onClick={() => { sfxButtonClick(); onShop(); }}
-            className="px-8 py-3 bg-secondary text-secondary-foreground font-display text-lg font-semibold rounded-lg transition-all duration-300 hover:scale-105 active:scale-95 border border-border hover:border-primary/30"
+            className="px-6 py-3 bg-secondary text-secondary-foreground font-display text-xs font-bold pixel-btn transition-colors hover:bg-secondary/80 border border-border"
           >
-            Ship Shop
+            SHIP SHOP
           </button>
         </div>
 
         {/* Controls hint */}
-        <div className="text-xs text-muted-foreground/60 font-body text-center mt-4">
-          <p>WASD / Arrow keys to sail • Click/touch to steer</p>
+        <div className="font-body text-sm text-muted-foreground/50 text-center mt-4">
+          <p>WASD / Arrow keys to sail</p>
+          <p>Click/touch to steer</p>
         </div>
       </div>
     </div>

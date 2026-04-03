@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,61 +6,62 @@
 
 @layer base {
   :root {
-    --background: 210 50% 8%;
-    --foreground: 195 30% 92%;
+    --background: 240 15% 5%;
+    --foreground: 45 10% 75%;
 
-    --card: 210 45% 12%;
-    --card-foreground: 195 30% 92%;
+    --card: 240 12% 9%;
+    --card-foreground: 45 10% 75%;
 
-    --popover: 210 45% 12%;
-    --popover-foreground: 195 30% 92%;
+    --popover: 240 12% 9%;
+    --popover-foreground: 45 10% 75%;
 
-    --primary: 195 85% 50%;
-    --primary-foreground: 210 50% 8%;
+    --primary: 180 30% 40%;
+    --primary-foreground: 240 15% 5%;
 
-    --secondary: 210 35% 18%;
-    --secondary-foreground: 195 30% 88%;
+    --secondary: 240 10% 14%;
+    --secondary-foreground: 45 8% 65%;
 
-    --muted: 210 30% 15%;
-    --muted-foreground: 200 15% 55%;
+    --muted: 240 8% 12%;
+    --muted-foreground: 220 8% 42%;
 
-    --accent: 45 90% 55%;
-    --accent-foreground: 210 50% 8%;
+    --accent: 40 50% 45%;
+    --accent-foreground: 240 15% 5%;
 
-    --destructive: 0 72% 55%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 50% 40%;
+    --destructive-foreground: 45 10% 85%;
 
-    --border: 210 30% 20%;
-    --input: 210 30% 20%;
-    --ring: 195 85% 50%;
+    --border: 240 10% 16%;
+    --input: 240 10% 16%;
+    --ring: 180 30% 40%;
 
-    --radius: 0.75rem;
+    --radius: 0px;
 
-    --ocean-deep: 210 55% 6%;
-    --ocean-mid: 200 60% 18%;
-    --ocean-light: 195 70% 35%;
-    --ocean-foam: 185 40% 75%;
-    --gold: 45 90% 55%;
-    --gold-dark: 38 80% 42%;
-    --storm: 220 40% 25%;
+    --ocean-deep: 220 30% 4%;
+    --ocean-mid: 210 25% 12%;
+    --ocean-light: 200 20% 22%;
+    --ocean-foam: 180 15% 45%;
+    --gold: 40 50% 45%;
+    --gold-dark: 35 40% 30%;
+    --storm: 250 20% 12%;
 
-    --sidebar-background: 210 45% 10%;
-    --sidebar-foreground: 195 30% 88%;
-    --sidebar-primary: 195 85% 50%;
-    --sidebar-primary-foreground: 210 50% 8%;
-    --sidebar-accent: 210 35% 18%;
-    --sidebar-accent-foreground: 195 30% 88%;
-    --sidebar-border: 210 30% 20%;
-    --sidebar-ring: 195 85% 50%;
+    --sidebar-background: 240 12% 7%;
+    --sidebar-foreground: 45 8% 65%;
+    --sidebar-primary: 180 30% 40%;
+    --sidebar-primary-foreground: 240 15% 5%;
+    --sidebar-accent: 240 10% 14%;
+    --sidebar-accent-foreground: 45 8% 65%;
+    --sidebar-border: 240 10% 16%;
+    --sidebar-ring: 180 30% 40%;
 
-    --font-display: 'Outfit', sans-serif;
-    --font-body: 'Space Grotesk', sans-serif;
+    --font-display: 'Press Start 2P', monospace;
+    --font-body: 'VT323', monospace;
   }
 }
 
 @layer base {
   * {
     @apply border-border;
+    image-rendering: pixelated;
   }
 
   body {
@@ -75,18 +76,49 @@
 
 @layer utilities {
   .text-glow {
-    text-shadow: 0 0 20px hsl(195 85% 50% / 0.4), 0 0 40px hsl(195 85% 50% / 0.2);
+    text-shadow: 0 0 8px hsl(180 30% 40% / 0.5), 0 0 20px hsl(180 30% 40% / 0.2);
   }
 
   .btn-glow {
-    box-shadow: 0 0 15px hsl(195 85% 50% / 0.3), 0 4px 20px hsl(210 50% 8% / 0.5);
+    box-shadow: 0 0 6px hsl(180 30% 40% / 0.3), 0 2px 8px hsl(240 15% 5% / 0.6);
   }
 
   .card-glow {
-    box-shadow: 0 0 30px hsl(195 85% 50% / 0.1), 0 8px 32px hsl(210 50% 8% / 0.4);
+    box-shadow: 0 0 12px hsl(180 30% 40% / 0.08), 0 4px 16px hsl(240 15% 5% / 0.5);
   }
 
   .gold-glow {
-    text-shadow: 0 0 15px hsl(45 90% 55% / 0.5);
+    text-shadow: 0 0 6px hsl(40 50% 45% / 0.5);
+  }
+
+  .pixel-border {
+    border: 3px solid hsl(var(--border));
+    box-shadow: 
+      inset -2px -2px 0 0 hsl(240 10% 8%),
+      inset 2px 2px 0 0 hsl(240 10% 20%);
+  }
+
+  .pixel-btn {
+    border: 2px solid hsl(var(--border));
+    box-shadow: 
+      2px 2px 0 0 hsl(240 15% 3%),
+      inset -1px -1px 0 0 hsl(240 10% 8%),
+      inset 1px 1px 0 0 hsl(240 10% 22%);
+  }
+
+  .pixel-btn:active {
+    box-shadow: none;
+    transform: translate(2px, 2px);
+  }
+
+  .scanlines {
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      hsl(0 0% 0% / 0.05) 2px,
+      hsl(0 0% 0% / 0.05) 4px
+    );
+    pointer-events: none;
   }
 }
