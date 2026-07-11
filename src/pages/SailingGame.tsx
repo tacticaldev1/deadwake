@@ -284,7 +284,7 @@ const SailingGame: React.FC = () => {
       )}
 
       {screen === 'village' && (
-        <VillageScreen
+        <VillageWalkScene
           village={currentVillage}
           shop={shop}
           missionState={missionState}
