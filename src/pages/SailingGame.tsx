@@ -14,7 +14,7 @@ import ShopScreen from '../components/ShopScreen';
 import MiniMap from '../components/MiniMap';
 import TutorialOverlay from '../components/TutorialOverlay';
 import AdminPanel from '../components/AdminPanel';
-import VillageScreen from '../components/VillageScreen';
+import VillageWalkScene from '../components/VillageWalkScene';
 import MissionHUD from '../components/MissionHUD';
 import DockPrompt from '../components/DockPrompt';
 import WaypointCompass from '../components/WaypointCompass';
@@ -284,7 +284,7 @@ const SailingGame: React.FC = () => {
       )}
 
       {screen === 'village' && (
-        <VillageScreen
+        <VillageWalkScene
           village={currentVillage}
           shop={shop}
           missionState={missionState}
