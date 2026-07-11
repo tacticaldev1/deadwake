@@ -585,3 +585,71 @@ function drawWindIndicator(ctx: CanvasRenderingContext2D, wind: WindState, cw: n
   ctx.textAlign = 'center';
   ctx.fillText('WIND', cx, cy + r + 12);
 }
+
+// ============ VILLAGES ============
+function drawVillage(ctx: CanvasRenderingContext2D, v: Village, time: number) {
+  const flicker = 0.7 + Math.sin(time * 3 + v.x * 0.01) * 0.15;
+
+  // Dock (wooden pier extending south)
+  ctx.fillStyle = 'hsl(25, 18%, 18%)';
+  ctx.fillRect(px(v.x - 20), px(v.y - 4), 40, 8);
+  ctx.fillStyle = 'hsl(25, 15%, 12%)';
+  ctx.fillRect(px(v.x - 18), px(v.y + 4), 4, 10);
+  ctx.fillRect(px(v.x + 14), px(v.y + 4), 4, 10);
+
+  // Ground / island platform
+  ctx.fillStyle = 'hsl(210, 18%, 12%)';
+  ctx.fillRect(px(v.x - 60), px(v.y - 40), 120, 40);
+  ctx.fillStyle = 'hsl(210, 20%, 10%)';
+  ctx.fillRect(px(v.x - 60), px(v.y - 40), 120, 4);
+
+  // Houses — 3 pixel houses with pitched roofs
+  const houses = [
+    { x: v.x - 45, y: v.y - 40, w: 22, h: 18 },
+    { x: v.x - 12, y: v.y - 46, w: 24, h: 24 },
+    { x: v.x + 22, y: v.y - 38, w: 20, h: 16 },
+  ];
+  for (const h of houses) {
+    // Body
+    ctx.fillStyle = 'hsl(25, 15%, 15%)';
+    ctx.fillRect(px(h.x), px(h.y), h.w, h.h);
+    // Roof
+    ctx.fillStyle = v.color;
+    ctx.fillRect(px(h.x - 2), px(h.y - 4), h.w + 4, 4);
+    ctx.fillRect(px(h.x + 2), px(h.y - 7), h.w - 4, 3);
+    // Window (glowing)
+    ctx.fillStyle = `hsla(40, 65%, 55%, ${flicker})`;
+    ctx.fillRect(px(h.x + h.w / 2 - 2), px(h.y + h.h / 2 - 2), 4, 4);
+    // Door
+    ctx.fillStyle = 'hsl(25, 20%, 8%)';
+    ctx.fillRect(px(h.x + h.w / 2 - 2), px(h.y + h.h - 6), 4, 6);
+  }
+
+  // Dock lantern (glowing warm point)
+  const lanternY = v.y - 6;
+  ctx.fillStyle = 'hsl(25, 15%, 10%)';
+  ctx.fillRect(px(v.x - 1), px(lanternY - 12), 2, 12);
+  ctx.fillStyle = `hsla(35, 90%, 60%, ${flicker})`;
+  ctx.fillRect(px(v.x - 2), px(lanternY - 15), 4, 4);
+  // Warm glow ring
+  const grad = ctx.createRadialGradient(v.x, lanternY - 13, 2, v.x, lanternY - 13, 60);
+  grad.addColorStop(0, `hsla(35, 80%, 55%, ${0.25 * flicker})`);
+  grad.addColorStop(1, 'hsla(35, 80%, 55%, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(v.x - 60, lanternY - 73, 120, 120);
+
+  // Village name (only visible when camera is close-ish — always for simplicity)
+  ctx.font = '7px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'hsla(0, 0%, 90%, 0.65)';
+  ctx.fillText(v.name.toUpperCase(), v.x, v.y - 60);
+
+  // Docking radius (subtle ring)
+  ctx.strokeStyle = `hsla(180, 30%, 55%, ${0.15 + Math.sin(time * 1.5) * 0.05})`;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.arc(v.x, v.y, v.radius, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
