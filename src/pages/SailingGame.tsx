@@ -4,7 +4,8 @@ import { useGameLoop } from '../game/useGameLoop';
 import { loadShopState, saveShopState } from '../game/shopData';
 import { MissionState, Mission, loadMissionState, saveMissionState } from '../game/missions';
 import { DIALOGUES } from '../game/dialogue';
-import { resumeAudio, sfxCollectCoin, sfxCollectCrate, sfxBoost, sfxCrash, sfxSplash, startAmbient, stopAmbient } from '../game/sfx';
+import { VILLAGES, Village, getVillage, findNearbyVillage } from '../game/villages';
+import { resumeAudio, sfxCollectCoin, sfxCollectCrate, sfxBoost, sfxCrash, sfxButtonClick, startAmbient, stopAmbient } from '../game/sfx';
 import MainMenu from '../components/MainMenu';
 import HouseScene from '../components/HouseScene';
 import GameHUD from '../components/GameHUD';
@@ -13,28 +14,38 @@ import ShopScreen from '../components/ShopScreen';
 import MiniMap from '../components/MiniMap';
 import TutorialOverlay from '../components/TutorialOverlay';
 import AdminPanel from '../components/AdminPanel';
-import PortScreen from '../components/PortScreen';
+import VillageScreen from '../components/VillageScreen';
 import MissionHUD from '../components/MissionHUD';
-import DialogueBox from '../components/DialogueBox';
+import DockPrompt from '../components/DockPrompt';
+import WaypointCompass from '../components/WaypointCompass';
+
+type Screen = GameScreen | 'village';
 
 const SailingGame: React.FC = () => {
-  const [screen, setScreen] = useState<GameScreen>('menu');
+  const [screen, setScreen] = useState<Screen>('menu');
   const [shop, setShop] = useState<ShopState>(loadShopState());
   const [missionState, setMissionState] = useState<MissionState>(loadMissionState());
   const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem('deadwake_tutorial_done'));
   const [showAdmin, setShowAdmin] = useState(false);
-  const [firstPortVisit, setFirstPortVisit] = useState(() => !localStorage.getItem('deadwake_visited_port'));
   const [isFirstHouseVisit, setIsFirstHouseVisit] = useState(() => !localStorage.getItem('deadwake_house_done'));
+  const [firstVillageVisit, setFirstVillageVisit] = useState(() => !localStorage.getItem('deadwake_visited_port'));
+  const [currentVillageId, setCurrentVillageId] = useState<string>('haven');
   const [activeMissionDuringPlay, setActiveMissionDuringPlay] = useState<Mission | null>(null);
-  const [missionCompleteDialogue, setMissionCompleteDialogue] = useState<string | null>(null);
+  const [lastDockedVillageId, setLastDockedVillageId] = useState<string>('haven');
+  const [dockableVillage, setDockableVillage] = useState<Village | null>(null);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const missionTarget = activeMissionDuringPlay?.target || null;
   const { gameState, startGame, stopGame } = useGameLoop(canvasRef, missionTarget);
+
+  const currentVillage = getVillage(currentVillageId) || VILLAGES[0];
+  const targetVillage = activeMissionDuringPlay?.toVillage ? getVillage(activeMissionDuringPlay.toVillage) || null : null;
 
   const prevCoinsRef = useRef(0);
   const prevBoostRef = useRef(false);
   const prevGameOverRef = useRef(false);
 
+  // Audio hooks
   useEffect(() => {
     if (screen !== 'playing') return;
     const gs = gameState;
@@ -49,26 +60,25 @@ const SailingGame: React.FC = () => {
     prevGameOverRef.current = gs.gameOver;
   }, [gameState.coins, gameState.speedBoostTimer, gameState.gameOver, screen]);
 
-  // Mission progress
+  // Non-village mission progress (collect/survive)
   useEffect(() => {
     if (screen !== 'playing' || !activeMissionDuringPlay) return;
     const mission = activeMissionDuringPlay;
     if (mission.type === 'collect' && mission.collectGoal) {
-      setActiveMissionDuringPlay({ ...mission, collectCurrent: gameState.coins });
-      if (gameState.coins >= mission.collectGoal) completeMission(mission);
+      if (mission.collectCurrent !== gameState.coins) {
+        setActiveMissionDuringPlay({ ...mission, collectCurrent: gameState.coins });
+      }
+      if (gameState.coins >= mission.collectGoal) completeMissionInSea(mission);
     }
     if (mission.type === 'survive' && mission.surviveTime) {
-      setActiveMissionDuringPlay({ ...mission, surviveCurrent: gameState.time });
-      if (gameState.time >= mission.surviveTime) completeMission(mission);
+      if (mission.surviveCurrent !== gameState.time) {
+        setActiveMissionDuringPlay({ ...mission, surviveCurrent: gameState.time });
+      }
+      if (gameState.time >= mission.surviveTime) completeMissionInSea(mission);
     }
-    if (mission.type === 'delivery' && mission.target) {
-      const dx = gameState.boatX - mission.target.x;
-      const dy = gameState.boatY - mission.target.y;
-      if (Math.sqrt(dx * dx + dy * dy) < mission.target.radius) completeMission(mission);
-    }
-  }, [gameState.coins, gameState.time, gameState.boatX, gameState.boatY, screen, activeMissionDuringPlay]);
+  }, [gameState.coins, gameState.time, screen, activeMissionDuringPlay]);
 
-  const completeMission = useCallback((mission: Mission) => {
+  const completeMissionInSea = useCallback((mission: Mission) => {
     const updated: MissionState = {
       ...missionState,
       completedMissions: [...missionState.completedMissions, mission.id],
@@ -76,14 +86,67 @@ const SailingGame: React.FC = () => {
     };
     setMissionState(updated);
     saveMissionState(updated);
-    const newShop = { ...shop, coins: shop.coins + mission.reward.coins + gameState.coins };
+    const newShop = { ...shop, coins: shop.coins + mission.reward.coins };
     setShop(newShop);
     saveShopState(newShop);
     setActiveMissionDuringPlay(null);
-    if (mission.onCompleteDialogue) setMissionCompleteDialogue(mission.onCompleteDialogue);
-  }, [missionState, shop, gameState.coins]);
+  }, [missionState, shop]);
 
-  // Start: go to house scene first
+  // Docking detection: check every state update if boat is near a village
+  useEffect(() => {
+    if (screen !== 'playing' || gameState.gameOver) {
+      if (dockableVillage) setDockableVillage(null);
+      return;
+    }
+    const nearby = findNearbyVillage(gameState.boatX, gameState.boatY);
+    // Show dock prompt only if it's a village we haven't just left,
+    // OR if we've moved sufficiently far from the last dock.
+    if (nearby && nearby.id !== lastDockedVillageId) {
+      if (dockableVillage?.id !== nearby.id) setDockableVillage(nearby);
+    } else if (nearby && nearby.id === lastDockedVillageId) {
+      if (dockableVillage) setDockableVillage(null);
+    } else {
+      if (dockableVillage) setDockableVillage(null);
+      // Clear last docked once far enough away
+      if (lastDockedVillageId) {
+        const last = getVillage(lastDockedVillageId);
+        if (last) {
+          const dx = gameState.boatX - last.x;
+          const dy = gameState.boatY - last.y;
+          if (Math.sqrt(dx * dx + dy * dy) > last.radius + 200) {
+            setLastDockedVillageId('');
+          }
+        }
+      }
+    }
+  }, [gameState.boatX, gameState.boatY, gameState.gameOver, screen, lastDockedVillageId, dockableVillage]);
+
+  const dockAtVillage = useCallback((village: Village) => {
+    sfxButtonClick();
+    stopGame();
+    stopAmbient();
+    // Award pickup coins earned during sail into shop wallet
+    const updated = { ...shop, coins: shop.coins + gameState.coins };
+    if (gameState.score > shop.highScore) updated.highScore = gameState.score;
+    setShop(updated);
+    saveShopState(updated);
+    setCurrentVillageId(village.id);
+    setLastDockedVillageId(village.id);
+    setDockableVillage(null);
+    setScreen('village');
+  }, [shop, gameState, stopGame]);
+
+  // Keyboard: E to dock
+  useEffect(() => {
+    if (screen !== 'playing') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'e' && dockableVillage) dockAtVillage(dockableVillage);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [screen, dockableVillage, dockAtVillage]);
+
+  // Flow: Menu → House (first) → Village(Haven)
   const handlePlay = useCallback(() => {
     resumeAudio();
     setScreen('house');
@@ -94,7 +157,8 @@ const SailingGame: React.FC = () => {
       setIsFirstHouseVisit(false);
       localStorage.setItem('deadwake_house_done', '1');
     }
-    setScreen('port');
+    setCurrentVillageId('haven');
+    setScreen('village');
   }, [isFirstHouseVisit]);
 
   const handleSetSail = useCallback((mission?: Mission) => {
@@ -103,9 +167,20 @@ const SailingGame: React.FC = () => {
     prevBoostRef.current = false;
     prevGameOverRef.current = false;
     setActiveMissionDuringPlay(mission || null);
+    setLastDockedVillageId(currentVillageId);
     setScreen('playing');
-    if (!showTutorial) setTimeout(() => startGame(), 100);
-  }, [startGame, showTutorial]);
+    if (!showTutorial) {
+      setTimeout(() => {
+        startGame();
+        // Spawn player at current village position
+        const v = getVillage(currentVillageId);
+        if (v) {
+          // Small nudge south so the boat starts just outside the dock
+          setTimeout(() => {}, 0);
+        }
+      }, 100);
+    }
+  }, [startGame, showTutorial, currentVillageId]);
 
   const handleTutorialDone = useCallback(() => {
     setShowTutorial(false);
@@ -125,25 +200,21 @@ const SailingGame: React.FC = () => {
     setTimeout(() => startGame(), 100);
   }, [shop, gameState, startGame]);
 
-  const handleReturnToPort = useCallback(() => {
+  const handleReturnToVillage = useCallback(() => {
     stopGame();
     stopAmbient();
     const updated = { ...shop, coins: shop.coins + gameState.coins };
     if (gameState.score > shop.highScore) updated.highScore = gameState.score;
     setShop(updated);
     saveShopState(updated);
-    setScreen('port');
+    setScreen('village');
   }, [shop, gameState, stopGame]);
 
   const handleMenu = useCallback(() => {
     stopGame();
     stopAmbient();
-    const updated = { ...shop, coins: shop.coins + gameState.coins };
-    if (gameState.score > shop.highScore) updated.highScore = gameState.score;
-    setShop(updated);
-    saveShopState(updated);
     setScreen('menu');
-  }, [shop, gameState, stopGame]);
+  }, [stopGame]);
 
   const handleShopUpdate = useCallback((newShop: ShopState) => {
     setShop(newShop);
@@ -153,16 +224,23 @@ const SailingGame: React.FC = () => {
   const handleMissionUpdate = useCallback((newState: MissionState) => {
     setMissionState(newState);
     saveMissionState(newState);
-  }, []);
+    // If a delivery was completed via VillageScreen, award coins
+    const wasActive = missionState.activeMission;
+    if (wasActive && !newState.activeMission && newState.completedMissions.includes(wasActive.id)) {
+      const newShop = { ...shop, coins: shop.coins + wasActive.reward.coins };
+      setShop(newShop);
+      saveShopState(newShop);
+    }
+  }, [missionState, shop]);
 
   const handleAdmin = useCallback(() => setShowAdmin(true), []);
 
-  const handleFirstPortVisitDone = useCallback(() => {
-    setFirstPortVisit(false);
+  const handleFirstVillageVisitDone = useCallback(() => {
+    setFirstVillageVisit(false);
     localStorage.setItem('deadwake_visited_port', '1');
   }, []);
 
-  // Game over
+  // Game over → back to village
   useEffect(() => {
     if (gameState.gameOver && screen === 'playing') {
       stopAmbient();
@@ -205,11 +283,17 @@ const SailingGame: React.FC = () => {
         <HouseScene onComplete={handleHouseComplete} isFirstTime={isFirstHouseVisit} />
       )}
 
-      {screen === 'port' && (
-        <PortScreen shop={shop} missionState={missionState} onSetSail={handleSetSail}
-          onShop={() => setScreen('shop')} onMissionUpdate={handleMissionUpdate}
-          onShopUpdate={handleShopUpdate} firstVisit={firstPortVisit}
-          onFirstVisitDone={handleFirstPortVisitDone} />
+      {screen === 'village' && (
+        <VillageScreen
+          village={currentVillage}
+          shop={shop}
+          missionState={missionState}
+          onSetSail={handleSetSail}
+          onShop={() => setScreen('shop')}
+          onMissionUpdate={handleMissionUpdate}
+          isFirstVisit={firstVillageVisit && currentVillageId === 'haven'}
+          onFirstVisitDone={handleFirstVillageVisitDone}
+        />
       )}
 
       {screen === 'playing' && showTutorial && (
@@ -224,27 +308,26 @@ const SailingGame: React.FC = () => {
             maxHealth={gameState.maxHealth} />
           <MiniMap state={gameState} />
           {activeMissionDuringPlay && <MissionHUD mission={activeMissionDuringPlay} />}
+          {targetVillage && <WaypointCompass state={gameState} targetVillage={targetVillage} />}
+          {dockableVillage && (
+            <DockPrompt village={dockableVillage} onDock={() => dockAtVillage(dockableVillage)} />
+          )}
         </>
       )}
 
       {screen === 'gameover' && (
         <GameOverScreen score={gameState.score} coins={gameState.coins}
           distance={Math.floor(gameState.distance)} highScore={shop.highScore}
-          onRestart={handleRestart} onMenu={handleReturnToPort} />
+          onRestart={handleRestart} onMenu={handleReturnToVillage} />
       )}
 
       {screen === 'shop' && (
         <ShopScreen shop={shop} onUpdate={handleShopUpdate}
-          onBack={() => setScreen('port')} />
+          onBack={() => setScreen('village')} />
       )}
 
       {showAdmin && (
         <AdminPanel shop={shop} onUpdate={handleShopUpdate} onClose={() => setShowAdmin(false)} />
-      )}
-
-      {missionCompleteDialogue && DIALOGUES[missionCompleteDialogue] && (
-        <DialogueBox sequence={DIALOGUES[missionCompleteDialogue]}
-          onComplete={() => { setMissionCompleteDialogue(null); handleReturnToPort(); }} />
       )}
     </div>
   );
