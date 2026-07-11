@@ -1,5 +1,6 @@
 import { GameState, Particle, Obstacle, Collectible, WindState, WakePoint } from './types';
 import { BoatSkin } from './types';
+import { VILLAGES, Village } from './villages';
 
 const CANVAS_W = 1200;
 const CANVAS_H = 800;
@@ -263,6 +264,9 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, skin
   ctx.translate(-cameraX, -cameraY);
 
   drawWater(ctx, cameraX, cameraY, canvasW, canvasH, cameraZoom, time, state.event);
+
+  // Villages
+  for (const v of VILLAGES) drawVillage(ctx, v, time);
 
   if (missionTarget) drawMissionBeacon(ctx, missionTarget, time);
 
