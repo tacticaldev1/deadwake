@@ -1,11 +1,16 @@
+import { VILLAGES, getVillage } from './villages';
+
 export interface Mission {
   id: string;
   title: string;
   description: string;
   type: 'delivery' | 'collect' | 'explore' | 'survive';
   status: 'available' | 'active' | 'completed';
-  reward: { coins: number; xp?: number };
-  // Target location in world coords
+  reward: { coins: number };
+  // Village-based navigation
+  fromVillage?: string;
+  toVillage?: string;
+  // For non-village deliveries
   target?: { x: number; y: number; radius: number; label: string };
   // For collect missions
   collectGoal?: number;
@@ -13,55 +18,106 @@ export interface Mission {
   // For survive missions
   surviveTime?: number;
   surviveCurrent?: number;
-  // Dialogue to trigger on complete
   onCompleteDialogue?: string;
-  // Act requirement
+  giver: string; // NPC who gave the mission
+  giverVillage: string; // village where it was accepted
   act: number;
+}
+
+// Helper: build target from a village
+function villageTarget(villageId: string, label: string) {
+  const v = getVillage(villageId);
+  if (!v) return undefined;
+  return { x: v.x, y: v.y, radius: v.radius, label };
 }
 
 export const ACT1_MISSIONS: Mission[] = [
   {
-    id: 'first_delivery',
-    title: "Naveen's Supplies",
-    description: 'Deliver trade supplies to the eastern buoy marker.',
+    id: 'first_delivery_salt',
+    title: 'To Salt Cove',
+    description: "Sail east to Salt Cove. Deliver Naveen's supply crate to Old Ren the fisher.",
     type: 'delivery',
     status: 'available',
-    reward: { coins: 25 },
-    target: { x: 800, y: -400, radius: 60, label: 'Drop-off' },
+    reward: { coins: 40 },
+    fromVillage: 'haven',
+    toVillage: 'salt_cove',
+    target: villageTarget('salt_cove', 'Salt Cove'),
+    giver: 'friend',
+    giverVillage: 'haven',
+    act: 1,
+    onCompleteDialogue: 'fisher_first',
+  },
+  {
+    id: 'delivery_grey',
+    title: 'To Grey Harbor',
+    description: 'Sail southwest to Grey Harbor. Deliver the fisher\'s catch to Naveen.',
+    type: 'delivery',
+    status: 'available',
+    reward: { coins: 55 },
+    fromVillage: 'salt_cove',
+    toVillage: 'grey_harbor',
+    target: villageTarget('grey_harbor', 'Grey Harbor'),
+    giver: 'fisher',
+    giverVillage: 'salt_cove',
     act: 1,
     onCompleteDialogue: 'trader_first',
   },
   {
-    id: 'collect_salvage',
-    title: 'Salvage Run',
-    description: 'Collect 10 coins from the nearby waters.',
-    type: 'collect',
+    id: 'delivery_mistford',
+    title: 'To Mistford',
+    description: 'Sail north to Mistford. Bells and oil for the Bellkeeper.',
+    type: 'delivery',
     status: 'available',
-    reward: { coins: 15 },
-    collectGoal: 10,
-    collectCurrent: 0,
+    reward: { coins: 70 },
+    fromVillage: 'grey_harbor',
+    toVillage: 'mistford',
+    target: villageTarget('mistford', 'Mistford'),
+    giver: 'trader',
+    giverVillage: 'grey_harbor',
     act: 1,
+    onCompleteDialogue: 'bellkeeper_first',
   },
   {
-    id: 'explore_north',
-    title: 'Chart the Northern Waters',
-    description: 'Sail 500m north to survey the old route.',
+    id: 'return_haven',
+    title: 'Return to Haven',
+    description: 'The child gave you a strange map. Bring it home to the Harbormaster.',
     type: 'delivery',
     status: 'available',
     reward: { coins: 30 },
-    target: { x: 0, y: -1200, radius: 80, label: 'Survey Point' },
+    fromVillage: 'mistford',
+    toVillage: 'haven',
+    target: villageTarget('haven', 'Haven Village'),
+    giver: 'child',
+    giverVillage: 'mistford',
     act: 1,
-    onCompleteDialogue: 'dad_log_1',
+    onCompleteDialogue: 'harbormaster_first',
   },
   {
-    id: 'survive_storm',
-    title: 'Weather the Storm',
-    description: 'Survive 30 seconds in open water without returning to port.',
-    type: 'survive',
+    id: 'east_forbidden',
+    title: 'The Forbidden East',
+    description: 'Sail far east to Ashenreach. Father warned against this. Go anyway.',
+    type: 'delivery',
     status: 'available',
-    reward: { coins: 40 },
-    surviveTime: 30,
-    surviveCurrent: 0,
+    reward: { coins: 150 },
+    fromVillage: 'haven',
+    toVillage: 'ashenreach',
+    target: villageTarget('ashenreach', 'Ashenreach'),
+    giver: 'harbormaster',
+    giverVillage: 'haven',
+    act: 1,
+    onCompleteDialogue: 'stranger_first',
+  },
+  {
+    id: 'collect_salvage',
+    title: 'Salvage Run',
+    description: 'The tide brings up strange things. Collect 10 coins from open water.',
+    type: 'collect',
+    status: 'available',
+    reward: { coins: 20 },
+    collectGoal: 10,
+    collectCurrent: 0,
+    giver: 'mechanic',
+    giverVillage: 'haven',
     act: 1,
   },
 ];
@@ -85,11 +141,25 @@ export function createMissionState(): MissionState {
 export function loadMissionState(): MissionState {
   try {
     const saved = localStorage.getItem('deadwake_missions');
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved) as MissionState;
+      // Rebuild targets from village positions (in case village data changed)
+      if (parsed.activeMission?.toVillage) {
+        parsed.activeMission.target = villageTarget(parsed.activeMission.toVillage, getVillage(parsed.activeMission.toVillage)?.name || 'Destination');
+      }
+      return parsed;
+    }
   } catch {}
   return createMissionState();
 }
 
 export function saveMissionState(state: MissionState) {
   localStorage.setItem('deadwake_missions', JSON.stringify(state));
+}
+
+// Get missions available at a particular village (offered by NPCs there)
+export function getMissionsForVillage(state: MissionState, villageId: string): Mission[] {
+  return state.availableMissions.filter(
+    m => m.giverVillage === villageId && !state.completedMissions.includes(m.id)
+  );
 }
