@@ -18,6 +18,8 @@ import VillageWalkScene from '../components/VillageWalkScene';
 import MissionHUD from '../components/MissionHUD';
 import DockPrompt from '../components/DockPrompt';
 import WaypointCompass from '../components/WaypointCompass';
+import TouchSteering from '../components/TouchSteering';
+import { useIsTouchDevice } from '../hooks/use-touch-device';
 
 type Screen = GameScreen | 'village';
 
@@ -36,7 +38,8 @@ const SailingGame: React.FC = () => {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const missionTarget = activeMissionDuringPlay?.target || null;
-  const { gameState, startGame, stopGame } = useGameLoop(canvasRef, missionTarget);
+  const { gameState, startGame, stopGame, inputRef } = useGameLoop(canvasRef, missionTarget);
+  const isTouchDevice = useIsTouchDevice();
 
   const currentVillage = getVillage(currentVillageId) || VILLAGES[0];
   const targetVillage = activeMissionDuringPlay?.toVillage ? getVillage(activeMissionDuringPlay.toVillage) || null : null;
@@ -312,6 +315,7 @@ const SailingGame: React.FC = () => {
           {dockableVillage && (
             <DockPrompt village={dockableVillage} onDock={() => dockAtVillage(dockableVillage)} />
           )}
+          {isTouchDevice && <TouchSteering inputRef={inputRef} />}
         </>
       )}
 

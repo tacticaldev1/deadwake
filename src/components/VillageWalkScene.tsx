@@ -5,6 +5,7 @@ import { MissionState, Mission, getMissionsForVillage } from '../game/missions';
 import { DIALOGUES, DialogueSequence, NPC_PORTRAITS } from '../game/dialogue';
 import DialogueBox from './DialogueBox';
 import { sfxButtonClick } from '../game/sfx';
+import { useIsTouchDevice } from '../hooks/use-touch-device';
 
 interface Props {
   village: Village;
@@ -50,6 +51,7 @@ const VillageWalkScene: React.FC<Props> = ({
   village, shop, missionState, onSetSail, onShop, onMissionUpdate, isFirstVisit, onFirstVisitDone,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isTouchDevice = useIsTouchDevice();
   const playerRef = useRef({
     x: DOCK_POS.x,
     y: DOCK_POS.y - 30,
@@ -318,11 +320,15 @@ const VillageWalkScene: React.FC<Props> = ({
 
       {/* Controls hint */}
       <div className="mt-16 font-body text-xs text-muted-foreground/60 text-center px-4">
-        Move: WASD / Arrows &nbsp;·&nbsp; Interact: E / Space
+        {isTouchDevice
+          ? 'Move: D-pad · Interact: E button'
+          : 'Move: WASD / Arrows · Interact: E / Space'}
       </div>
 
-      {/* Touch dpad (mobile) */}
-      <TouchDpad inputRef={inputRef} onInteract={() => nearbyRef.current && handleInteract(nearbyRef.current)} canInteract={!!nearby} />
+      {/* Touch dpad (auto-shown on touch devices) */}
+      {isTouchDevice && (
+        <TouchDpad inputRef={inputRef} onInteract={() => nearbyRef.current && handleInteract(nearbyRef.current)} canInteract={!!nearby} />
+      )}
 
       {/* Dialogue */}
       {dialogue && <DialogueBox sequence={dialogue} onComplete={onDialogueDone} />}
@@ -424,7 +430,7 @@ const TouchDpad: React.FC<{
   const set = (k: 'up' | 'down' | 'left' | 'right', v: boolean) => { inputRef.current[k] = v; };
   const btn = "w-12 h-12 pixel-border bg-card/80 active:bg-primary/40 font-display text-primary text-sm flex items-center justify-center select-none touch-none";
   return (
-    <div className="absolute bottom-4 left-0 right-0 z-30 flex justify-between items-end px-4 md:hidden pointer-events-none">
+    <div className="absolute bottom-4 left-0 right-0 z-30 flex justify-between items-end px-4 pointer-events-none">
       <div className="pointer-events-auto grid grid-cols-3 gap-1 w-40">
         <div />
         <button className={btn} onPointerDown={() => set('up', true)} onPointerUp={() => set('up', false)} onPointerLeave={() => set('up', false)}>▲</button>
