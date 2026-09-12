@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
+import { useIsTouchDevice } from '../hooks/use-touch-device';
 
 interface TutorialOverlayProps {
   onDismiss: () => void;
 }
 
-const steps = [
+const getSteps = (isTouchDevice: boolean) => [
   {
     title: 'WELCOME, CAPTAIN',
     desc: 'Navigate the dark waters. Avoid what lurks beneath.',
@@ -12,7 +13,9 @@ const steps = [
   },
   {
     title: 'CONTROLS',
-    desc: 'WASD or Arrows to steer. W to accelerate. Click/drag to aim.',
+    desc: isTouchDevice
+      ? 'Drag the STEER joystick to sail. Tap buttons to interact and dock.'
+      : 'WASD or Arrows to steer. W to accelerate. Click/drag to aim.',
     icon: '>',
   },
   {
@@ -30,6 +33,8 @@ const steps = [
 const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onDismiss }) => {
   const [step, setStep] = useState(0);
   const [visible, setVisible] = useState(true);
+  const isTouchDevice = useIsTouchDevice();
+  const steps = getSteps(isTouchDevice);
 
   const next = () => {
     if (step < steps.length - 1) {
