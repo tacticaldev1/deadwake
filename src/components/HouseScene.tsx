@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 interface HouseSceneProps {
   onComplete: () => void;
-  isFirstTime: boolean;
 }
 
 const INTRO_LINES = [
@@ -20,29 +19,153 @@ const INTRO_LINES = [
   { text: "The harbor is waiting.", delay: 80 },
 ];
 
-const RETURN_LINES = [
-  { text: "Home.", delay: 80 },
-  { text: "The map spreads across the table, routes marked in father's hand.", delay: 80 },
-  { text: "Some paths are fading. New ones need charting.", delay: 80 },
-];
+const W = 320;
+const H = 240;
+function px(v: number) { return Math.round(v); }
 
-const HouseScene: React.FC<HouseSceneProps> = ({ onComplete, isFirstTime }) => {
-  const lines = isFirstTime ? INTRO_LINES : RETURN_LINES;
+// Same blocky pixel-figure technique as VillageWalkScene's drawPerson, kept
+// as its own small copy here rather than exported/shared — this scene draws
+// dad as a translucent, motionless memory (not a walking NPC), which needs
+// different alpha/pose handling than the shared walking-figure helper covers.
+function drawDad(ctx: CanvasRenderingContext2D, x: number, y: number, alpha: number) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  // Soft glow behind him
+  const grad = ctx.createRadialGradient(x, y - 6, 2, x, y - 6, 22);
+  grad.addColorStop(0, 'hsla(210, 40%, 70%, 0.15)');
+  grad.addColorStop(1, 'hsla(210, 40%, 70%, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(x - 22, y - 28, 44, 44);
+  // Legs
+  ctx.fillStyle = 'hsl(220, 12%, 18%)';
+  ctx.fillRect(px(x - 4), px(y - 2), 3, 8);
+  ctx.fillRect(px(x + 1), px(y - 2), 3, 8);
+  // Coat (long, dark)
+  ctx.fillStyle = 'hsl(210, 15%, 22%)';
+  ctx.fillRect(px(x - 6), px(y - 16), 12, 16);
+  // Coat trim
+  ctx.fillStyle = 'hsl(30, 25%, 35%)';
+  ctx.fillRect(px(x - 6), px(y - 16), 12, 2);
+  // Head
+  ctx.fillStyle = 'hsl(25, 20%, 45%)';
+  ctx.fillRect(px(x - 3), px(y - 23), 6, 6);
+  // Hair/beard
+  ctx.fillStyle = 'hsl(210, 8%, 55%)';
+  ctx.fillRect(px(x - 3), px(y - 24), 6, 2);
+  ctx.fillRect(px(x - 3), px(y - 18), 6, 2);
+  ctx.restore();
+}
+
+function renderRoom(ctx: CanvasRenderingContext2D, time: number, showLetter: boolean, dadAlpha: number) {
+  ctx.clearRect(0, 0, W, H);
+
+  // Floor
+  ctx.fillStyle = 'hsl(25, 15%, 12%)';
+  ctx.fillRect(0, H - 40, W, 40);
+  ctx.fillStyle = 'hsl(25, 10%, 18%)';
+  ctx.fillRect(0, H - 40, W, 2);
+
+  // Back wall
+  ctx.fillStyle = 'hsl(220, 10%, 8%)';
+  ctx.fillRect(0, 0, W, H - 40);
+
+  // Window with moonlight
+  const wx = W - 64, wy = 32, ww = 40, wh = 52;
+  const winGrad = ctx.createRadialGradient(wx + ww / 2, wy + wh / 2, 4, wx + ww / 2, wy + wh / 2, 40);
+  winGrad.addColorStop(0, 'hsl(210, 20%, 15%)');
+  winGrad.addColorStop(1, 'hsl(220, 15%, 6%)');
+  ctx.fillStyle = winGrad;
+  ctx.fillRect(wx, wy, ww, wh);
+  ctx.strokeStyle = 'hsl(220, 8%, 15%)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(wx, wy, ww, wh);
+  ctx.fillStyle = 'hsl(220, 8%, 15%)';
+  ctx.fillRect(px(wx + ww / 2 - 0.5), wy, 1, wh);
+  ctx.fillRect(wx, px(wy + wh / 2 - 0.5), ww, 1);
+
+  // Table
+  const tx = 30, ty = H - 54;
+  ctx.fillStyle = 'hsl(25, 20%, 15%)';
+  ctx.fillRect(tx, ty, 60, 14);
+  ctx.fillStyle = 'hsl(25, 15%, 12%)';
+  ctx.fillRect(tx + 4, ty + 14, 4, 14);
+  ctx.fillRect(tx + 52, ty + 14, 4, 14);
+
+  // Letter on table
+  if (showLetter) {
+    ctx.fillStyle = `hsla(40, 15%, 55%, ${0.85 + Math.sin(time * 2) * 0.1})`;
+    ctx.fillRect(tx + 8, ty - 6, 14, 10);
+  }
+
+  // Candle + flame + light pool
+  const cx = tx + 42, cy = ty;
+  const flicker = 0.85 + Math.sin(time * 4.5) * 0.15;
+  const lightGrad = ctx.createRadialGradient(cx, cy, 4, cx, cy, 70);
+  lightGrad.addColorStop(0, `hsla(40, 60%, 45%, ${0.16 * flicker})`);
+  lightGrad.addColorStop(1, 'hsla(40, 60%, 45%, 0)');
+  ctx.fillStyle = lightGrad;
+  ctx.fillRect(cx - 70, cy - 70, 140, 140);
+  ctx.fillStyle = 'hsl(40, 20%, 60%)';
+  ctx.fillRect(cx - 1, cy - 8, 3, 8);
+  ctx.fillStyle = `hsla(40, 80%, 60%, ${flicker})`;
+  ctx.fillRect(cx - 1, cy - 12, 3, 5);
+
+  // Coat hook + dad's coat, by the door
+  ctx.fillStyle = 'hsl(220, 8%, 18%)';
+  ctx.fillRect(10, H - 40 - 62, 2, 6);
+  ctx.fillStyle = 'hsl(210, 15%, 20%)';
+  ctx.fillRect(6, H - 40 - 58, 10, 16);
+
+  // Door frame
+  ctx.strokeStyle = 'hsl(220, 8%, 13%)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(38, 8);
+  ctx.lineTo(38, H - 40);
+  ctx.stroke();
+
+  // Dad, standing quietly near the window — a memory more than a presence
+  if (dadAlpha > 0) drawDad(ctx, W - 90, H - 40, dadAlpha);
+
+  // Vignette
+  const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, W * 0.7);
+  vg.addColorStop(0, 'hsla(0,0%,0%,0)');
+  vg.addColorStop(1, 'hsla(0,0%,0%,0.55)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// Shown exactly once, the very first time the player presses "Begin Voyage" —
+// DeadwakeGame.tsx gates this behind isFirstHouseVisit so returning to Haven
+// on later voyages goes straight to the village instead of replaying this.
+const HouseScene: React.FC<HouseSceneProps> = ({ onComplete }) => {
   const [lineIndex, setLineIndex] = useState(0);
   const [displayedText, setDisplayedText] = useState('');
   const [isTyping, setIsTyping] = useState(true);
   const [showScene, setShowScene] = useState(true);
-  const [flickerPhase, setFlickerPhase] = useState(0);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const timeRef = useRef(0);
+  const rafRef = useRef(0);
 
-  const currentLine = lines[lineIndex];
+  const currentLine = INTRO_LINES[lineIndex];
+  const showLetter = lineIndex < 10;
+  const dadAlpha = lineIndex >= 1 ? Math.min(0.5, (lineIndex - 1) * 0.08) : 0;
 
-  // Candle flicker
+  // Ambient render loop for the candle flicker / dad's soft glow.
   useEffect(() => {
-    const interval = setInterval(() => {
-      setFlickerPhase(p => p + 1);
-    }, 150);
-    return () => clearInterval(interval);
-  }, []);
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    let last = performance.now();
+    const loop = (ts: number) => {
+      timeRef.current += (ts - last) / 1000;
+      last = ts;
+      renderRoom(ctx, timeRef.current, showLetter, dadAlpha);
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [showLetter, dadAlpha]);
 
   // Typewriter
   useEffect(() => {
@@ -69,13 +192,13 @@ const HouseScene: React.FC<HouseSceneProps> = ({ onComplete, isFirstTime }) => {
       setIsTyping(false);
       return;
     }
-    if (lineIndex < lines.length - 1) {
+    if (lineIndex < INTRO_LINES.length - 1) {
       setLineIndex(lineIndex + 1);
     } else {
       setShowScene(false);
       setTimeout(onComplete, 600);
     }
-  }, [isTyping, lineIndex, lines, currentLine, onComplete]);
+  }, [isTyping, lineIndex, currentLine, onComplete]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -88,100 +211,37 @@ const HouseScene: React.FC<HouseSceneProps> = ({ onComplete, isFirstTime }) => {
     return () => window.removeEventListener('keydown', onKey);
   }, [handleAdvance]);
 
-  const candleGlow = Math.sin(flickerPhase * 0.7) * 0.15 + 0.85;
-
   return (
     <div
-      className={`absolute inset-0 z-20 transition-opacity duration-500 ${showScene ? 'opacity-100' : 'opacity-0'}`}
+      className={`absolute inset-0 z-20 flex flex-col items-center justify-center bg-background transition-opacity duration-500 ${showScene ? 'opacity-100' : 'opacity-0'}`}
       onClick={handleAdvance}
       style={{ cursor: 'pointer' }}
     >
-      {/* Dark room background */}
-      <div className="absolute inset-0 bg-background" />
-      
-      {/* Pixel art room scene */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="relative" style={{ width: 320, height: 240 }}>
-          {/* Floor */}
-          <div className="absolute bottom-0 left-0 right-0 h-16" 
-            style={{ background: 'hsl(25, 15%, 12%)' }} />
-          <div className="absolute bottom-16 left-0 right-0 h-[2px]" 
-            style={{ background: 'hsl(25, 10%, 18%)' }} />
-          
-          {/* Back wall */}
-          <div className="absolute top-0 left-0 right-0 bottom-16" 
-            style={{ background: 'hsl(220, 10%, 8%)' }} />
-          
-          {/* Window - moonlight */}
-          <div className="absolute top-8 right-8 w-16 h-20 border-2"
-            style={{ 
-              borderColor: 'hsl(220, 8%, 15%)',
-              background: `radial-gradient(ellipse at center, hsl(210, 20%, 15%) 0%, hsl(220, 15%, 6%) 100%)`,
-            }}>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-[1px] h-full" style={{ background: 'hsl(220, 8%, 15%)' }} />
-              <div className="absolute w-full h-[1px]" style={{ background: 'hsl(220, 8%, 15%)' }} />
-            </div>
-          </div>
+      <div className="absolute inset-0 scanlines opacity-10 pointer-events-none" />
 
-          {/* Table */}
-          <div className="absolute bottom-14 left-12 w-24 h-6"
-            style={{ background: 'hsl(25, 20%, 15%)' }} />
-          <div className="absolute bottom-8 left-14 w-2 h-6"
-            style={{ background: 'hsl(25, 15%, 12%)' }} />
-          <div className="absolute bottom-8 left-32 w-2 h-6"
-            style={{ background: 'hsl(25, 15%, 12%)' }} />
-          
-          {/* Letter on table */}
-          {isFirstTime && (
-            <div className="absolute bottom-[76px] left-20 w-6 h-4"
-              style={{ background: 'hsl(40, 15%, 55%)', opacity: candleGlow }} />
-          )}
+      <canvas
+        ref={canvasRef}
+        width={W}
+        height={H}
+        className="pixel-border"
+        style={{
+          imageRendering: 'pixelated',
+          width: 'min(90vw, 640px)',
+          height: 'auto',
+          aspectRatio: `${W} / ${H}`,
+          background: 'hsl(220, 15%, 5%)',
+        }}
+      />
 
-          {/* Candle on table */}
-          <div className="absolute bottom-[76px] left-28">
-            <div className="w-2 h-4" style={{ background: 'hsl(40, 20%, 60%)' }} />
-            {/* Flame */}
-            <div 
-              className="absolute -top-3 left-0 w-2 h-3"
-              style={{ 
-                background: `radial-gradient(ellipse at bottom, hsl(40, 80%, 60%) 0%, hsl(25, 70%, 40%) 60%, transparent 100%)`,
-                opacity: candleGlow,
-              }} 
-            />
-            {/* Candle light radius */}
-            <div 
-              className="absolute -top-16 -left-16 w-36 h-32"
-              style={{ 
-                background: `radial-gradient(ellipse at 50% 80%, hsl(40, 50%, 30% / ${candleGlow * 0.12}) 0%, transparent 70%)`,
-              }} 
-            />
-          </div>
-
-          {/* Coat hook by door */}
-          <div className="absolute top-12 left-4 w-1 h-3" style={{ background: 'hsl(220, 8%, 18%)' }} />
-          <div className="absolute top-14 left-2 w-5 h-8" 
-            style={{ background: 'hsl(220, 10%, 14%)', opacity: 0.7 }} />
-
-          {/* Door frame */}
-          <div className="absolute top-4 left-0 w-10 bottom-16 border-r-2"
-            style={{ borderColor: 'hsl(220, 8%, 13%)' }} />
-        </div>
-      </div>
-
-      {/* Scanlines overlay */}
-      <div className="absolute inset-0 scanlines opacity-30" />
-
-      {/* Text area at bottom */}
-      <div className="absolute inset-x-0 bottom-0 p-4">
-        <div className="max-w-lg mx-auto pixel-border bg-card/95 p-4">
+      <div className="w-full max-w-lg px-4 mt-4">
+        <div className="pixel-border bg-card/95 p-4">
           <p className="font-body text-foreground text-lg leading-relaxed min-h-[2em]">
             {displayedText}
             {isTyping && <span className="animate-typewriter-cursor text-primary">_</span>}
           </p>
           <div className="text-right mt-2">
             <span className="font-body text-xs text-muted-foreground">
-              {isTyping ? '[click to skip]' : lineIndex < lines.length - 1 ? '[click to continue]' : '[click to leave]'}
+              {isTyping ? '[click to skip]' : lineIndex < INTRO_LINES.length - 1 ? '[click to continue]' : '[click to leave]'}
             </span>
           </div>
         </div>

@@ -7,24 +7,24 @@
 @layer base {
   :root {
     --background: 240 15% 5%;
-    --foreground: 45 10% 75%;
+    --foreground: 45 15% 92%;
 
     --card: 240 12% 9%;
-    --card-foreground: 45 10% 75%;
+    --card-foreground: 45 15% 92%;
 
     --popover: 240 12% 9%;
-    --popover-foreground: 45 10% 75%;
+    --popover-foreground: 45 15% 92%;
 
-    --primary: 180 30% 40%;
+    --primary: 180 45% 58%;
     --primary-foreground: 240 15% 5%;
 
     --secondary: 240 10% 14%;
-    --secondary-foreground: 45 8% 65%;
+    --secondary-foreground: 45 10% 85%;
 
     --muted: 240 8% 12%;
-    --muted-foreground: 220 8% 42%;
+    --muted-foreground: 220 12% 68%;
 
-    --accent: 40 50% 45%;
+    --accent: 40 65% 62%;
     --accent-foreground: 240 15% 5%;
 
     --destructive: 0 50% 40%;
@@ -62,6 +62,42 @@
   * {
     @apply border-border;
     image-rendering: pixelated;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.65) hsl(var(--secondary));
+  }
+
+  /* Chunky pixel-art scrollbar, everywhere, instead of the OS default. */
+  *::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: hsl(var(--secondary));
+    box-shadow: inset 1px 0 0 0 hsl(var(--border)), inset -1px 0 0 0 hsl(var(--border));
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.7);
+    border: 2px solid hsl(240 15% 5%);
+    box-shadow:
+      inset -2px -2px 0 0 hsl(180 45% 30%),
+      inset 2px 2px 0 0 hsl(180 60% 72%);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.9);
+  }
+
+  *::-webkit-scrollbar-thumb:active {
+    background: hsl(var(--primary));
+    box-shadow:
+      inset 2px 2px 0 0 hsl(180 45% 30%),
+      inset -2px -2px 0 0 hsl(180 60% 72%);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: hsl(var(--secondary));
   }
 
   body {

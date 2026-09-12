@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ShopState } from '../game/types';
 import { Mission, MissionState } from '../game/missions';
 import { DIALOGUES, DialogueSequence } from '../game/dialogue';
+import { loadProfile } from '../game/profile';
 import DialogueBox from './DialogueBox';
 import MissionBoard from './MissionBoard';
 import { sfxButtonClick } from '../game/sfx';
@@ -175,7 +176,7 @@ const PortScreen: React.FC<PortScreenProps> = ({
       </div>
 
       {activeDialogue && (
-        <DialogueBox sequence={activeDialogue} onComplete={handleDialogueComplete} />
+        <DialogueBox sequence={activeDialogue} onComplete={handleDialogueComplete} profile={loadProfile()} />
       )}
     </div>
   );

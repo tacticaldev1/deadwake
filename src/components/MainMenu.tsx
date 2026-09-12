@@ -4,30 +4,22 @@ import { sfxButtonClick } from '../game/sfx';
 interface MainMenuProps {
   onPlay: () => void;
   onShop: () => void;
-  onAdmin: () => void;
+  onCharacter: () => void;
+  onControls: () => void;
+  onCoop: () => void;
   highScore: number;
   coins: number;
+  playerName: string;
+  empireRank: string;
 }
 
-const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore, coins }) => {
-  const [titleClicks, setTitleClicks] = useState(0);
+const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onCharacter, onControls, onCoop, highScore, coins, playerName, empireRank }) => {
   const [flickerPhase, setFlickerPhase] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => setFlickerPhase(p => p + 1), 200);
     return () => clearInterval(interval);
   }, []);
-
-  const handleTitleClick = () => {
-    const next = titleClicks + 1;
-    if (next >= 10) {
-      setTitleClicks(0);
-      sfxButtonClick();
-      onAdmin();
-      return;
-    }
-    setTitleClicks(next);
-  };
 
   const handlePlay = () => {
     sfxButtonClick();
@@ -44,15 +36,14 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore,
       <div className="animate-fade-in flex flex-col items-center gap-6 relative z-10">
         {/* Title */}
         <div className="text-center" style={{ opacity: glowOpacity }}>
-          <h1
-            onClick={handleTitleClick}
-            className="font-display text-2xl md:text-4xl font-bold tracking-wide text-foreground text-glow mb-3 cursor-pointer select-none"
-          >
+          <h1 className="font-display text-2xl md:text-4xl font-bold tracking-wide text-foreground text-glow mb-3 select-none">
             DEADWAKE
           </h1>
           <p className="font-body text-lg text-muted-foreground tracking-widest uppercase">
             Inherit the Tide
           </p>
+          <p className="font-body text-sm text-primary/80 mt-1">Captain {playerName}</p>
+          <p className="font-display text-[8px] text-accent/90 mt-1 tracking-wide">{empireRank}</p>
         </div>
 
         {/* Pixel divider */}
@@ -89,12 +80,27 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onAdmin, highScore,
           >
             SHIP SHOP
           </button>
-        </div>
 
-        {/* Controls hint */}
-        <div className="font-body text-sm text-muted-foreground/50 text-center mt-4">
-          <p>WASD / Arrow keys to sail</p>
-          <p>Click/touch to steer</p>
+          <button
+            onClick={() => { sfxButtonClick(); onCharacter(); }}
+            className="px-6 py-3 bg-secondary text-secondary-foreground font-display text-xs font-bold pixel-btn transition-colors hover:bg-secondary/80 border border-border"
+          >
+            CHARACTER
+          </button>
+
+          <button
+            onClick={() => { sfxButtonClick(); onControls(); }}
+            className="px-6 py-3 bg-secondary text-secondary-foreground font-display text-xs font-bold pixel-btn transition-colors hover:bg-secondary/80 border border-border"
+          >
+            CONTROLS
+          </button>
+
+          <button
+            onClick={() => { sfxButtonClick(); onCoop(); }}
+            className="px-6 py-3 bg-secondary text-secondary-foreground font-display text-xs font-bold pixel-btn transition-colors hover:bg-secondary/80 border border-border"
+          >
+            CO-OP
+          </button>
         </div>
       </div>
     </div>

@@ -5,10 +5,13 @@ import { Village } from '../game/villages';
 interface WaypointCompassProps {
   state: GameState;
   targetVillage: Village | null;
+  mysteryVillage?: Village | null;
+  homeVillage?: Village | null;
 }
 
-// Edge-of-screen arrow pointing to mission destination when off-screen
-const WaypointCompass: React.FC<WaypointCompassProps> = ({ state, targetVillage }) => {
+// Edge-of-screen arrow pointing to mission destination when off-screen.
+// Falls back to the nearest undiscovered village, then to home, so there's always a heading to follow.
+const WaypointCompass: React.FC<WaypointCompassProps> = ({ state, targetVillage, mysteryVillage, homeVillage }) => {
   const [viewport, setViewport] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   useEffect(() => {
@@ -17,10 +20,13 @@ const WaypointCompass: React.FC<WaypointCompassProps> = ({ state, targetVillage 
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  if (!targetVillage) return null;
+  const target = targetVillage || mysteryVillage || homeVillage;
+  if (!target) return null;
+  const isMystery = !targetVillage && !!mysteryVillage;
+  const isHome = !targetVillage && !mysteryVillage;
 
-  const dx = targetVillage.x - state.boatX;
-  const dy = targetVillage.y - state.boatY;
+  const dx = target.x - state.boatX;
+  const dy = target.y - state.boatY;
   const distance = Math.sqrt(dx * dx + dy * dy);
   const angle = Math.atan2(dy, dx);
 
@@ -46,6 +52,9 @@ const WaypointCompass: React.FC<WaypointCompassProps> = ({ state, targetVillage 
   const cx = viewport.w / 2 + x;
   const cy = viewport.h / 2 + y;
 
+  const arrowColor = isMystery ? 'hsl(40, 55%, 55%)' : isHome ? 'hsl(140, 35%, 55%)' : 'hsl(180, 45%, 62%)';
+  const glowColor = isMystery ? 'hsl(40, 55%, 40%)' : isHome ? 'hsl(140, 35%, 35%)' : 'hsl(180, 30%, 40%)';
+
   return (
     <div
       className="absolute pointer-events-none z-20"
@@ -62,13 +71,15 @@ const WaypointCompass: React.FC<WaypointCompassProps> = ({ state, targetVillage 
             transform: `rotate(${angle + Math.PI / 2}rad)`,
             borderLeft: '10px solid transparent',
             borderRight: '10px solid transparent',
-            borderBottom: '14px solid hsl(180, 30%, 55%)',
-            filter: 'drop-shadow(0 0 4px hsl(180, 30%, 40%))',
+            borderBottom: `14px solid ${arrowColor}`,
+            filter: `drop-shadow(0 0 4px ${glowColor})`,
           }}
         />
-        <div className="pixel-border bg-card/90 px-2 py-1">
-          <div className="font-display text-[7px] text-primary whitespace-nowrap">{targetVillage.name}</div>
-          <div className="font-body text-xs text-muted-foreground text-center">{Math.floor(distance)}m</div>
+        <div className="pixel-border bg-card/95 px-2 py-1">
+          <div className={`font-display text-[9px] whitespace-nowrap ${isMystery ? 'text-accent' : isHome ? 'text-green-400' : 'text-primary'}`}>
+            {isMystery ? 'UNCHARTED' : isHome ? 'HOME' : target.name}
+          </div>
+          <div className="font-body text-sm text-muted-foreground text-center">{Math.floor(distance)}m</div>
         </div>
       </div>
     </div>

@@ -35,6 +35,14 @@ export interface TrailEffect {
   description: string;
 }
 
+export interface SpeedUpgrade {
+  id: string;
+  name: string;
+  price: number;
+  speedMod: number;
+  description: string;
+}
+
 export interface Obstacle {
   x: number;
   y: number;
@@ -113,6 +121,7 @@ export interface GameState {
   speedBoostTimer: number;
   event: 'none' | 'storm' | 'calm' | 'gust';
   eventTimer: number;
+  ramKills: number;
 }
 
 export interface ShopState {
@@ -120,9 +129,11 @@ export interface ShopState {
   unlockedSkins: string[];
   unlockedSails: string[];
   unlockedTrails: string[];
+  unlockedSpeedUpgrades: string[];
   selectedSkin: string;
   selectedSail: string;
   selectedTrail: string;
+  selectedSpeedUpgrade: string;
   highScore: number;
 }
 

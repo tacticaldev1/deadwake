@@ -2,24 +2,43 @@ import { useRef, useCallback, useEffect, useState } from 'react';
 import { GameState } from './types';
 import { InputState } from './engine';
 import { createInitialState, updateGame, renderGame } from './engine';
-import { BOAT_SKINS, loadShopState } from './shopData';
+import { BOAT_SKINS, SPEED_UPGRADES, loadShopState } from './shopData';
 import { BoatSkin } from './types';
 
-export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>, missionTarget?: { x: number; y: number; radius: number; label: string } | null) {
+// Co-op sources its skin/speed-upgrade selection from the shared party
+// economy (useCoopSession), not this PC's solo localStorage save — passing
+// skinOverride lets CoopGame.tsx supply the real effective skin so sailing
+// physics actually reflect what was bought, instead of silently falling back
+// to whatever this machine's solo save happens to contain.
+export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>, missionTarget?: { x: number; y: number; radius: number; label: string } | null, discoveredIds?: string[], skinOverride?: BoatSkin) {
   const stateRef = useRef<GameState>(createInitialState());
   const inputRef = useRef<InputState>({ up: false, down: false, left: false, right: false, mouseAngle: null });
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef(0);
   const [gameState, setGameState] = useState<GameState>(stateRef.current);
   const runningRef = useRef(false);
+  const pausedRef = useRef(false);
+  const skinOverrideRef = useRef(skinOverride);
+  skinOverrideRef.current = skinOverride;
 
   const getSkin = useCallback((): BoatSkin => {
+    if (skinOverrideRef.current) return skinOverrideRef.current;
     const shop = loadShopState();
-    return BOAT_SKINS.find(s => s.id === shop.selectedSkin) || BOAT_SKINS[0];
+    const base = BOAT_SKINS.find(s => s.id === shop.selectedSkin) || BOAT_SKINS[0];
+    const upgrade = SPEED_UPGRADES.find(u => u.id === shop.selectedSpeedUpgrade) || SPEED_UPGRADES[0];
+    return upgrade.speedMod === 1 ? base : { ...base, speedMod: base.speedMod * upgrade.speedMod };
   }, []);
 
   const loop = useCallback((timestamp: number) => {
     if (!runningRef.current) return;
+
+    if (pausedRef.current) {
+      // Keep the clock from jumping when we unpause, but don't advance simulation.
+      lastTimeRef.current = timestamp;
+      rafRef.current = requestAnimationFrame(loop);
+      return;
+    }
+
     const dt = Math.min((timestamp - lastTimeRef.current) / 1000, 0.05);
     lastTimeRef.current = timestamp;
 
@@ -29,7 +48,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     if (canvas) {
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        renderGame(ctx, stateRef.current, getSkin(), canvas.width, canvas.height, missionTarget || undefined);
+        renderGame(ctx, stateRef.current, getSkin(), canvas.width, canvas.height, missionTarget || undefined, discoveredIds);
       }
     }
 
@@ -41,10 +60,10 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     }
 
     rafRef.current = requestAnimationFrame(loop);
-  }, [canvasRef, getSkin]);
+  }, [canvasRef, getSkin, missionTarget, discoveredIds]);
 
-  const startGame = useCallback(() => {
-    stateRef.current = createInitialState();
+  const startGame = useCallback((startX = 0, startY = 0) => {
+    stateRef.current = createInitialState(startX, startY);
     lastTimeRef.current = performance.now();
     runningRef.current = true;
     rafRef.current = requestAnimationFrame(loop);
@@ -52,7 +71,12 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
 
   const stopGame = useCallback(() => {
     runningRef.current = false;
+    pausedRef.current = false;
     cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  const setPaused = useCallback((paused: boolean) => {
+    pausedRef.current = paused;
   }, []);
 
   // Keyboard input
@@ -114,5 +138,5 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     };
   }, [canvasRef]);
 
-  return { gameState, startGame, stopGame };
+  return { gameState, startGame, stopGame, setPaused };
 }

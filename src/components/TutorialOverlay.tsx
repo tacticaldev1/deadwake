@@ -56,13 +56,13 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onDismiss }) => {
       <div className="absolute inset-0 scanlines opacity-20" />
       <div className="animate-fade-in pixel-border bg-card/95 p-6 md:p-8 max-w-xs w-full mx-4 text-center relative z-10">
         <div className="font-display text-lg text-primary mb-4">{current.icon}</div>
-        <h2 className="font-display text-[10px] text-foreground mb-3">{current.title}</h2>
-        <p className="font-body text-sm text-muted-foreground leading-relaxed mb-6">{current.desc}</p>
+        <h2 className="font-display text-xs text-foreground mb-3">{current.title}</h2>
+        <p className="font-body text-base text-muted-foreground leading-relaxed mb-6">{current.desc}</p>
 
         <div className="flex items-center justify-between">
           <button
             onClick={skip}
-            className="font-body text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            className="font-body text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             [skip]
           </button>
@@ -81,7 +81,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({ onDismiss }) => {
 
             <button
               onClick={next}
-              className="px-4 py-2 bg-primary text-primary-foreground font-display text-[8px] pixel-btn transition-colors hover:bg-primary/80"
+              className="px-4 py-2 bg-primary text-primary-foreground font-display text-[10px] pixel-btn transition-colors hover:bg-primary/80"
             >
               {step < steps.length - 1 ? 'NEXT' : 'SAIL'}
             </button>

@@ -3,6 +3,7 @@ import { ShopState } from '../game/types';
 import { Mission, MissionState, getMissionsForVillage } from '../game/missions';
 import { DIALOGUES, DialogueSequence, NPC_PORTRAITS } from '../game/dialogue';
 import { Village } from '../game/villages';
+import { loadProfile } from '../game/profile';
 import DialogueBox from './DialogueBox';
 import { sfxButtonClick } from '../game/sfx';
 
@@ -295,7 +296,7 @@ const VillageScreen: React.FC<VillageScreenProps> = ({
       </div>
 
       {activeDialogue && (
-        <DialogueBox sequence={activeDialogue} onComplete={handleDialogueComplete} />
+        <DialogueBox sequence={activeDialogue} onComplete={handleDialogueComplete} profile={loadProfile()} />
       )}
     </div>
   );

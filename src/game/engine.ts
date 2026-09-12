@@ -5,17 +5,17 @@ import { VILLAGES, Village } from './villages';
 const CANVAS_W = 1200;
 const CANVAS_H = 800;
 
-export function createInitialState(): GameState {
+export function createInitialState(startX = 0, startY = 0): GameState {
   return {
-    boatX: 0, boatY: 0, boatAngle: -Math.PI / 2, boatSpeed: 0, boatTilt: 0,
+    boatX: startX, boatY: startY, boatAngle: -Math.PI / 2, boatSpeed: 0, boatTilt: 0,
     velocity: { x: 0, y: 0 }, score: 0, coins: 0, distance: 0, gameOver: false,
     health: 3, maxHealth: 3, invulnTimer: 0, difficulty: 1,
     wind: { direction: -Math.PI / 4, strength: 0.5, targetDirection: -Math.PI / 4, targetStrength: 0.5 },
     obstacles: [], collectibles: [], particles: [], wakeTrail: [],
-    cameraX: 0, cameraY: 0, cameraTargetX: 0, cameraTargetY: 0,
+    cameraX: startX, cameraY: startY, cameraTargetX: startX, cameraTargetY: startY,
     cameraZoom: 1, cameraTargetZoom: 1, time: 0,
-    stormZone: { x: 0, y: -2000, radius: 400, active: false },
-    speedBoostTimer: 0, event: 'none', eventTimer: 0,
+    stormZone: { x: startX, y: startY - 2000, radius: 400, active: false },
+    speedBoostTimer: 0, event: 'none', eventTimer: 0, ramKills: 0,
   };
 }
 
@@ -29,6 +29,19 @@ function dist(x1: number, y1: number, x2: number, y2: number) { return Math.sqrt
 
 // Pixel-snap helper
 function px(v: number) { return Math.round(v); }
+
+// Pixel-font label with a dark outline so it reads clearly over any background
+function drawLabel(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, color: string, align: CanvasTextAlign = 'center') {
+  ctx.font = `${size}px "Press Start 2P"`;
+  ctx.textAlign = align;
+  ctx.lineJoin = 'round';
+  ctx.miterLimit = 2;
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(5,8,10,0.9)';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+}
 
 export function updateGame(state: GameState, input: InputState, dt: number, skin: BoatSkin): GameState {
   if (state.gameOver) return state;
@@ -145,12 +158,13 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
       type, radius: 15 + Math.random() * 20,
       rotation: type === 'boat' ? moveAngle : Math.random() * Math.PI * 2,
       vx: Math.cos(moveAngle) * speed, vy: Math.sin(moveAngle) * speed,
+      health: type === 'boat' ? 1 : undefined,
     });
   }
 
   // Move enemy boats + pursuit AI
-  const CHASE_RANGE = 300;
-  const CHASE_SPEED = 1.8;
+  const CHASE_RANGE = 220;
+  const CHASE_SPEED = 1.2;
   for (const obs of s.obstacles) {
     if (obs.type === 'boat' && obs.vx !== undefined && obs.vy !== undefined) {
       const d = dist(obs.x, obs.y, s.boatX, s.boatY);
@@ -191,9 +205,33 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
   s.collectibles = s.collectibles.filter(c => !c.collected && dist(c.x, c.y, s.boatX, s.boatY) < 1200);
 
   // Collision detection
+  const destroyedObstacles = new Set<Obstacle>();
   for (const obs of s.obstacles) {
     const d = dist(obs.x, obs.y, s.boatX, s.boatY);
-    if (d < obs.radius + 12 && s.invulnTimer <= 0) {
+    if (d >= obs.radius + 12) continue;
+
+    // Ramming: hitting an enemy boat while boosted sinks it instead of hurting the player.
+    if (obs.type === 'boat' && s.speedBoostTimer > 0) {
+      obs.health = (obs.health ?? 1) - 1;
+      s.boatSpeed *= 0.85;
+      for (let i = 0; i < 10; i++) {
+        const a = Math.random() * Math.PI * 2;
+        s.particles.push({
+          x: obs.x, y: obs.y,
+          vx: Math.cos(a) * (1 + Math.random() * 3),
+          vy: Math.sin(a) * (1 + Math.random() * 3),
+          life: 0.6, maxLife: 0.6, size: 2 + Math.random() * 3,
+          color: '#e8c368', alpha: 1, type: 'splash',
+        });
+      }
+      if (obs.health <= 0) {
+        destroyedObstacles.add(obs);
+        s.ramKills += 1;
+      }
+      continue;
+    }
+
+    if (s.invulnTimer <= 0) {
       s.health -= 1;
       s.invulnTimer = 1.5;
       const knockAngle = Math.atan2(s.boatY - obs.y, s.boatX - obs.x);
@@ -213,6 +251,9 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
       }
       if (s.health <= 0) { s.gameOver = true; break; }
     }
+  }
+  if (destroyedObstacles.size > 0) {
+    s.obstacles = s.obstacles.filter(o => !destroyedObstacles.has(o));
   }
 
   // Collectible pickup
@@ -251,7 +292,7 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
 
 // ============ PIXEL ART RENDERER ============
 
-export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, skin: BoatSkin, canvasW: number, canvasH: number, missionTarget?: { x: number; y: number; radius: number; label: string }) {
+export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, skin: BoatSkin, canvasW: number, canvasH: number, missionTarget?: { x: number; y: number; radius: number; label: string }, discoveredIds?: string[]) {
   const { cameraX, cameraY, cameraZoom, time } = state;
   
   // Enable pixelated rendering
@@ -266,7 +307,7 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, skin
   drawWater(ctx, cameraX, cameraY, canvasW, canvasH, cameraZoom, time, state.event);
 
   // Villages
-  for (const v of VILLAGES) drawVillage(ctx, v, time);
+  for (const v of VILLAGES) drawVillage(ctx, v, time, v.id === 'haven' || !!discoveredIds?.includes(v.id));
 
   if (missionTarget) drawMissionBeacon(ctx, missionTarget, time);
 
@@ -390,7 +431,7 @@ function drawWakeTrail(ctx: CanvasRenderingContext2D, trail: WakePoint[], color:
   ctx.globalAlpha = 1;
 }
 
-function drawPixelBoat(ctx: CanvasRenderingContext2D, state: GameState, skin: BoatSkin, time: number) {
+export function drawPixelBoat(ctx: CanvasRenderingContext2D, state: GameState, skin: BoatSkin, time: number) {
   const { boatX, boatY, boatAngle, boatTilt, boatSpeed } = state;
   const bob = Math.floor(Math.sin(time * 2) * 2);
 
@@ -426,7 +467,7 @@ function drawPixelBoat(ctx: CanvasRenderingContext2D, state: GameState, skin: Bo
   ctx.restore();
 }
 
-function drawObstacle(ctx: CanvasRenderingContext2D, obs: Obstacle, time: number) {
+export function drawObstacle(ctx: CanvasRenderingContext2D, obs: Obstacle, time: number) {
   ctx.save();
   ctx.translate(px(obs.x), px(obs.y));
 
@@ -483,7 +524,7 @@ function drawObstacle(ctx: CanvasRenderingContext2D, obs: Obstacle, time: number
   ctx.restore();
 }
 
-function drawCollectible(ctx: CanvasRenderingContext2D, col: Collectible, time: number) {
+export function drawCollectible(ctx: CanvasRenderingContext2D, col: Collectible, time: number) {
   const bob = Math.floor(Math.sin(time * 3 + col.bobOffset) * 2);
   const glow = Math.sin(time * 4 + col.bobOffset) > 0;
 
@@ -544,12 +585,7 @@ function drawMissionBeacon(ctx: CanvasRenderingContext2D, target: { x: number; y
   ctx.fillRect(px(target.x - 1), px(target.y - 1), 2, 2);
 
   // Label
-  ctx.globalAlpha = 0.7;
-  ctx.fillStyle = '#4a8888';
-  ctx.font = '10px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillText(target.label, px(target.x), px(target.y - target.radius - 8));
-  ctx.globalAlpha = 1;
+  drawLabel(ctx, target.label, px(target.x), px(target.y - target.radius - 10), 11, '#7fd4d4');
 }
 
 function drawWindIndicator(ctx: CanvasRenderingContext2D, wind: WindState, cw: number, ch: number, boatAngle: number) {
@@ -580,15 +616,22 @@ function drawWindIndicator(ctx: CanvasRenderingContext2D, wind: WindState, cw: n
   ctx.restore();
 
   // Label
-  ctx.fillStyle = 'rgba(50,70,80,0.5)';
-  ctx.font = '8px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillText('WIND', cx, cy + r + 12);
+  drawLabel(ctx, 'WIND', cx, cy + r + 14, 8, 'rgba(150,190,200,0.85)');
 }
 
 // ============ VILLAGES ============
-function drawVillage(ctx: CanvasRenderingContext2D, v: Village, time: number) {
+// Per-vibe glow color for windows/lanterns, and ambient tint
+const VIBE_GLOW: Record<Village['vibe'], string> = {
+  home: '40, 65%, 58%',
+  fishing: '195, 55%, 55%',
+  trade: '40, 70%, 60%',
+  foggy: '210, 30%, 65%',
+  forbidden: '10, 75%, 50%',
+};
+
+function drawVillage(ctx: CanvasRenderingContext2D, v: Village, time: number, discovered: boolean) {
   const flicker = 0.7 + Math.sin(time * 3 + v.x * 0.01) * 0.15;
+  const glowHsl = VIBE_GLOW[v.vibe];
 
   // Dock (wooden pier extending south)
   ctx.fillStyle = 'hsl(25, 18%, 18%)';
@@ -611,38 +654,97 @@ function drawVillage(ctx: CanvasRenderingContext2D, v: Village, time: number) {
   ];
   for (const h of houses) {
     // Body
-    ctx.fillStyle = 'hsl(25, 15%, 15%)';
+    ctx.fillStyle = discovered ? 'hsl(25, 15%, 15%)' : 'hsl(220, 8%, 10%)';
     ctx.fillRect(px(h.x), px(h.y), h.w, h.h);
     // Roof
-    ctx.fillStyle = v.color;
+    ctx.fillStyle = discovered ? v.color : 'hsl(220, 6%, 14%)';
     ctx.fillRect(px(h.x - 2), px(h.y - 4), h.w + 4, 4);
     ctx.fillRect(px(h.x + 2), px(h.y - 7), h.w - 4, 3);
     // Window (glowing)
-    ctx.fillStyle = `hsla(40, 65%, 55%, ${flicker})`;
+    ctx.fillStyle = `hsla(${glowHsl}, ${discovered ? flicker : flicker * 0.35})`;
     ctx.fillRect(px(h.x + h.w / 2 - 2), px(h.y + h.h / 2 - 2), 4, 4);
     // Door
     ctx.fillStyle = 'hsl(25, 20%, 8%)';
     ctx.fillRect(px(h.x + h.w / 2 - 2), px(h.y + h.h - 6), 4, 6);
   }
 
-  // Dock lantern (glowing warm point)
+  // Vibe-specific silhouette accent (only rendered once discovered — a reason to go dock)
+  if (discovered) {
+    if (v.vibe === 'fishing') {
+      // Drying racks with hanging fish, right of the houses
+      ctx.fillStyle = 'hsl(25, 12%, 10%)';
+      ctx.fillRect(px(v.x + 46), px(v.y - 30), 2, 14);
+      ctx.fillRect(px(v.x + 58), px(v.y - 30), 2, 14);
+      ctx.fillRect(px(v.x + 44), px(v.y - 30), 18, 2);
+      ctx.fillStyle = 'hsl(200, 20%, 30%)';
+      for (let i = 0; i < 3; i++) ctx.fillRect(px(v.x + 47 + i * 5), px(v.y - 28), 2, 6);
+    } else if (v.vibe === 'trade') {
+      // Market stall with awning + stacked barrels
+      ctx.fillStyle = 'hsl(0, 40%, 30%)';
+      ctx.fillRect(px(v.x - 58), px(v.y - 32), 20, 4);
+      ctx.fillStyle = 'hsl(25, 15%, 12%)';
+      ctx.fillRect(px(v.x - 54), px(v.y - 28), 2, 12);
+      ctx.fillRect(px(v.x - 42), px(v.y - 28), 2, 12);
+      ctx.fillStyle = 'hsl(30, 30%, 22%)';
+      ctx.fillRect(px(v.x + 40), px(v.y - 22), 8, 8);
+      ctx.fillRect(px(v.x + 50), px(v.y - 20), 7, 7);
+    } else if (v.vibe === 'foggy') {
+      // Bell tower
+      ctx.fillStyle = 'hsl(220, 10%, 12%)';
+      ctx.fillRect(px(v.x - 3), px(v.y - 68), 6, 30);
+      ctx.fillStyle = 'hsl(220, 12%, 18%)';
+      ctx.fillRect(px(v.x - 5), px(v.y - 72), 10, 6);
+      ctx.fillStyle = `hsla(${glowHsl}, ${flicker})`;
+      ctx.fillRect(px(v.x - 1), px(v.y - 68), 2, 4);
+    } else if (v.vibe === 'forbidden') {
+      // Scorched, leaning dead trees
+      ctx.fillStyle = 'hsl(10, 20%, 8%)';
+      ctx.fillRect(px(v.x - 58), px(v.y - 50), 2, 14);
+      ctx.fillRect(px(v.x - 57), px(v.y - 54), 6, 2);
+      ctx.fillRect(px(v.x + 58), px(v.y - 44), 2, 10);
+      ctx.fillRect(px(v.x + 56), px(v.y - 48), 5, 2);
+    } else if (v.vibe === 'home') {
+      // Flower boxes under the front house window
+      ctx.fillStyle = 'hsl(140, 25%, 22%)';
+      ctx.fillRect(px(v.x - 16), px(v.y - 24), 8, 2);
+      ctx.fillStyle = 'hsl(340, 30%, 40%)';
+      ctx.fillRect(px(v.x - 15), px(v.y - 26), 2, 2);
+      ctx.fillRect(px(v.x - 11), px(v.y - 26), 2, 2);
+    }
+  }
+
+  // Ambience overlays
+  if (discovered && v.vibe === 'foggy') {
+    for (let i = 0; i < 3; i++) {
+      const fx = v.x - 60 + ((i * 53 + time * 8) % 130);
+      ctx.fillStyle = 'rgba(180,190,200,0.05)';
+      ctx.fillRect(px(fx), px(v.y - 20 - i * 10), 26, 6);
+    }
+  }
+  if (discovered && v.vibe === 'forbidden') {
+    for (let i = 0; i < 6; i++) {
+      const ax = v.x - 50 + ((i * 37 + time * 6) % 100);
+      const ay = v.y - 60 + ((i * 23 + time * 14) % 60);
+      ctx.fillStyle = 'rgba(120,60,40,0.5)';
+      ctx.fillRect(px(ax), px(ay), 1, 1);
+    }
+  }
+
+  // Dock lantern (glowing point — visible even when undiscovered, so it can be found)
   const lanternY = v.y - 6;
   ctx.fillStyle = 'hsl(25, 15%, 10%)';
   ctx.fillRect(px(v.x - 1), px(lanternY - 12), 2, 12);
-  ctx.fillStyle = `hsla(35, 90%, 60%, ${flicker})`;
+  ctx.fillStyle = `hsla(${discovered ? glowHsl : '210, 15%, 55%'}, ${flicker})`;
   ctx.fillRect(px(v.x - 2), px(lanternY - 15), 4, 4);
-  // Warm glow ring
+  // Glow ring
   const grad = ctx.createRadialGradient(v.x, lanternY - 13, 2, v.x, lanternY - 13, 60);
-  grad.addColorStop(0, `hsla(35, 80%, 55%, ${0.25 * flicker})`);
-  grad.addColorStop(1, 'hsla(35, 80%, 55%, 0)');
+  grad.addColorStop(0, `hsla(${discovered ? glowHsl : '210, 15%, 55%'}, ${(discovered ? 0.25 : 0.12) * flicker})`);
+  grad.addColorStop(1, `hsla(${discovered ? glowHsl : '210, 15%, 55%'}, 0)`);
   ctx.fillStyle = grad;
   ctx.fillRect(v.x - 60, lanternY - 73, 120, 120);
 
-  // Village name (only visible when camera is close-ish — always for simplicity)
-  ctx.font = '7px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = 'hsla(0, 0%, 90%, 0.65)';
-  ctx.fillText(v.name.toUpperCase(), v.x, v.y - 60);
+  // Village name — full name once discovered, silhouette hint otherwise
+  drawLabel(ctx, discovered ? v.name.toUpperCase() : '???', v.x, v.y - 60, 8, discovered ? 'hsl(0, 0%, 95%)' : 'hsla(0, 0%, 70%, 0.7)');
 
   // Docking radius (subtle ring)
   ctx.strokeStyle = `hsla(180, 30%, 55%, ${0.15 + Math.sin(time * 1.5) * 0.05})`;

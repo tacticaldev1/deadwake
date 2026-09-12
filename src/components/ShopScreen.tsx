@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ShopState } from '../game/types';
-import { BOAT_SKINS, SAIL_STYLES, TRAIL_EFFECTS } from '../game/shopData';
+import { BOAT_SKINS, SAIL_STYLES, TRAIL_EFFECTS, SPEED_UPGRADES } from '../game/shopData';
 
 interface ShopScreenProps {
   shop: ShopState;
@@ -8,14 +8,15 @@ interface ShopScreenProps {
   onBack: () => void;
 }
 
-type ShopTab = 'boats' | 'sails' | 'trails';
+type ShopTab = 'boats' | 'sails' | 'trails' | 'speed';
+type ShopKind = 'skins' | 'sails' | 'trails' | 'speedUpgrades';
 
 const ShopScreen: React.FC<ShopScreenProps> = ({ shop, onUpdate, onBack }) => {
   const [tab, setTab] = useState<ShopTab>('boats');
 
-  const buyAndSelect = (type: 'skins' | 'sails' | 'trails', id: string, price: number) => {
-    const key = type === 'skins' ? 'unlockedSkins' : type === 'sails' ? 'unlockedSails' : 'unlockedTrails';
-    const selectKey = type === 'skins' ? 'selectedSkin' : type === 'sails' ? 'selectedSail' : 'selectedTrail';
+  const buyAndSelect = (type: ShopKind, id: string, price: number) => {
+    const key = type === 'skins' ? 'unlockedSkins' : type === 'sails' ? 'unlockedSails' : type === 'trails' ? 'unlockedTrails' : 'unlockedSpeedUpgrades';
+    const selectKey = type === 'skins' ? 'selectedSkin' : type === 'sails' ? 'selectedSail' : type === 'trails' ? 'selectedTrail' : 'selectedSpeedUpgrade';
     const updated = { ...shop };
     if (!updated[key].includes(id)) {
       if (updated.coins < price) return;
@@ -41,11 +42,11 @@ const ShopScreen: React.FC<ShopScreenProps> = ({ shop, onUpdate, onBack }) => {
         </div>
 
         <div className="flex gap-0 mb-4 pixel-border">
-          {(['boats', 'sails', 'trails'] as ShopTab[]).map(t => (
+          {(['boats', 'sails', 'trails', 'speed'] as ShopTab[]).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`flex-1 py-2 px-2 font-display text-[7px] transition-colors uppercase ${
+              className={`flex-1 py-2 px-2 font-display text-[9px] transition-colors uppercase ${
                 tab === t ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -102,6 +103,18 @@ const ShopScreen: React.FC<ShopScreenProps> = ({ shop, onUpdate, onBack }) => {
               />
             );
           })}
+          {tab === 'speed' && SPEED_UPGRADES.map(upgrade => {
+            const owned = shop.unlockedSpeedUpgrades.includes(upgrade.id);
+            const selected = shop.selectedSpeedUpgrade === upgrade.id;
+            return (
+              <ShopItem key={upgrade.id} name={upgrade.name} description={upgrade.description}
+                price={upgrade.price} owned={owned} selected={selected}
+                canAfford={shop.coins >= upgrade.price}
+                onSelect={() => buyAndSelect('speedUpgrades', upgrade.id, upgrade.price)}
+                preview={<div className="font-display text-[8px] text-primary">+{Math.round((upgrade.speedMod - 1) * 100)}%</div>}
+              />
+            );
+          })}
         </div>
       </div>
     </div>
@@ -125,16 +138,16 @@ const ShopItem: React.FC<ShopItemProps> = ({ name, description, price, owned, se
   >
     <div className="shrink-0">{preview}</div>
     <div className="flex-1 min-w-0">
-      <div className="font-display text-[7px] text-foreground">{name}</div>
-      <div className="font-body text-xs text-muted-foreground truncate">{description}</div>
+      <div className="font-display text-[9px] text-foreground">{name}</div>
+      <div className="font-body text-sm text-muted-foreground truncate">{description}</div>
     </div>
     <div className="shrink-0 text-right">
       {selected ? (
-        <span className="font-display text-[7px] text-primary">[ON]</span>
+        <span className="font-display text-[9px] text-primary">[ON]</span>
       ) : owned ? (
-        <span className="font-display text-[7px] text-muted-foreground">[OK]</span>
+        <span className="font-display text-[9px] text-muted-foreground">[OK]</span>
       ) : (
-        <span className="font-body text-xs text-accent">◆{price}</span>
+        <span className="font-body text-sm text-accent">◆{price}</span>
       )}
     </div>
   </button>

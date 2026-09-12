@@ -1,4 +1,4 @@
-import { BoatSkin, SailStyle, TrailEffect } from './types';
+import { BoatSkin, SailStyle, TrailEffect, SpeedUpgrade } from './types';
 
 export const BOAT_SKINS: BoatSkin[] = [
   {
@@ -69,21 +69,37 @@ export const TRAIL_EFFECTS: TrailEffect[] = [
   { id: 'fire', name: 'Fire Wake', price: 1000, particleColor: 'rgba(255,80,20,0.6)', glowColor: 'rgba(255,80,20,0.2)', description: 'Blazing hot trail.' },
 ];
 
+// Stacks multiplicatively with the boat skin's own speedMod (see useGameLoop's
+// getSkin) — a purchase here benefits every boat you own, not just one skin.
+export const SPEED_UPGRADES: SpeedUpgrade[] = [
+  { id: 'standard', name: 'Standard Rigging', price: 0, speedMod: 1, description: 'Stock rigging. Nothing special.' },
+  { id: 'tarred', name: 'Tarred Rigging', price: 350, speedMod: 1.08, description: 'Weatherproofed lines that hold wind better.' },
+  { id: 'copper', name: 'Copper-Fitted Hull', price: 750, speedMod: 1.16, description: 'A slicker hull cuts through water faster.' },
+  { id: 'windcutter', name: 'Windcutter Rig', price: 1400, speedMod: 1.25, description: 'A racing rig built for pure velocity.' },
+];
+
+const DEFAULT_SHOP_STATE: import('./types').ShopState = {
+  coins: 0,
+  unlockedSkins: ['classic'],
+  unlockedSails: ['plain'],
+  unlockedTrails: ['default'],
+  unlockedSpeedUpgrades: ['standard'],
+  selectedSkin: 'classic',
+  selectedSail: 'plain',
+  selectedTrail: 'default',
+  selectedSpeedUpgrade: 'standard',
+  highScore: 0,
+};
+
 export function loadShopState(): import('./types').ShopState {
   try {
     const saved = localStorage.getItem('sailgame_shop');
-    if (saved) return JSON.parse(saved);
+    // Spread over the defaults, not the other way around, so saves written
+    // before speed upgrades existed still come back with valid arrays/ids
+    // instead of undefined.
+    if (saved) return { ...DEFAULT_SHOP_STATE, ...JSON.parse(saved) };
   } catch {}
-  return {
-    coins: 0,
-    unlockedSkins: ['classic'],
-    unlockedSails: ['plain'],
-    unlockedTrails: ['default'],
-    selectedSkin: 'classic',
-    selectedSail: 'plain',
-    selectedTrail: 'default',
-    highScore: 0,
-  };
+  return { ...DEFAULT_SHOP_STATE };
 }
 
 export function saveShopState(state: import('./types').ShopState) {
