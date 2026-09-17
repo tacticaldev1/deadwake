@@ -1,9 +1,19 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { LanServer } from './server/lanServer';
 import { getLanIps } from './server/hostIp';
 import { startBeacon, startListening } from './server/discovery';
 import { DEFAULT_COOP_PORT } from '../src/net/protocol';
+
+// Short, spoken-aloud-friendly join code: excludes 0/O/1/I/L so nobody has to
+// guess which letter or digit a friend meant over voice chat.
+const CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+function generateJoinCode(): string {
+  let code = '';
+  for (let i = 0; i < 4; i++) code += CODE_ALPHABET[crypto.randomInt(CODE_ALPHABET.length)];
+  return code;
+}
 
 // Bundled to CommonJS (see electron/build.mjs) specifically so __dirname works
 // natively here — no import.meta.url/fileURLToPath dance needed.
@@ -75,8 +85,9 @@ ipcMain.handle('coop:startHost', (_event, port: number = DEFAULT_COOP_PORT) => {
   stopBeacon?.();
   try {
     lanServer = new LanServer(port);
-    stopBeacon = startBeacon(port);
-    return { ok: true, port };
+    const code = generateJoinCode();
+    stopBeacon = startBeacon(port, code);
+    return { ok: true, port, code };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }

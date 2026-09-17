@@ -13,15 +13,17 @@ export interface Beacon {
   type: typeof MAGIC;
   name: string;
   port: number;
+  code: string;
 }
 
 export interface FoundHost {
   ip: string;
   port: number;
   name: string;
+  code: string;
 }
 
-export function startBeacon(port: number): () => void {
+export function startBeacon(port: number, code: string): () => void {
   const socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
   const name = os.hostname();
   let ready = false;
@@ -32,7 +34,7 @@ export function startBeacon(port: number): () => void {
     ready = true;
   });
 
-  const payload = Buffer.from(JSON.stringify({ type: MAGIC, name, port } satisfies Beacon));
+  const payload = Buffer.from(JSON.stringify({ type: MAGIC, name, port, code } satisfies Beacon));
   const timer = setInterval(() => {
     if (!ready) return;
     socket.send(payload, DISCOVERY_PORT, '255.255.255.255');
@@ -51,7 +53,7 @@ export function startListening(onFound: (host: FoundHost) => void): () => void {
     try {
       const parsed = JSON.parse(msg.toString('utf-8')) as Beacon;
       if (parsed.type !== MAGIC) return;
-      onFound({ ip: rinfo.address, port: parsed.port, name: parsed.name });
+      onFound({ ip: rinfo.address, port: parsed.port, name: parsed.name, code: parsed.code });
     } catch {
       // ignore malformed/foreign UDP traffic on this port
     }

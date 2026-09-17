@@ -9,14 +9,17 @@ type Mode = 'solo' | 'coopMenu' | 'coop';
 const Index = () => {
   const [mode, setMode] = useState<Mode>('solo');
   const [client, setClient] = useState<NetClient | null>(null);
+  const [hostJoinCode, setHostJoinCode] = useState<string | null>(null);
 
-  const handleConnected = useCallback((c: NetClient) => {
+  const handleConnected = useCallback((c: NetClient, joinCode?: string) => {
     setClient(c);
+    setHostJoinCode(joinCode ?? null);
     setMode('coop');
   }, []);
 
   const handleLeaveCoop = useCallback(() => {
     setClient(null);
+    setHostJoinCode(null);
     setMode('solo');
   }, []);
 
@@ -25,7 +28,7 @@ const Index = () => {
   }
 
   if (mode === 'coop' && client) {
-    return <CoopGame client={client} onLeave={handleLeaveCoop} />;
+    return <CoopGame client={client} onLeave={handleLeaveCoop} hostJoinCode={hostJoinCode ?? undefined} />;
   }
 
   return <DeadwakeGame onEnterCoop={() => setMode('coopMenu')} />;

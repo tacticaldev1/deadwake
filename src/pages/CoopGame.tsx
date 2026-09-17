@@ -15,7 +15,7 @@ import { getEmpireRank } from '../game/empireRank';
 import { PlayerProfile, loadProfile, saveProfile } from '../game/profile';
 import {
   resumeAudio, sfxCollectCoin, sfxCollectCrate, sfxBoost, sfxCrash, sfxRamHit, sfxCannonFire, sfxDock, sfxPauseToggle,
-  startAmbient, stopAmbient, isMuted, setMuted,
+  sfxPlayerJoined, sfxButtonClick, startAmbient, stopAmbient, isMuted, setMuted,
 } from '../game/sfx';
 import VillageWalkScene, { OtherPlayer } from '../components/VillageWalkScene';
 import GameHUD from '../components/GameHUD';
@@ -38,6 +38,10 @@ import { useDeviceMode } from '../hooks/use-device-mode';
 interface CoopGameProps {
   client: NetClient;
   onLeave: () => void;
+  // Set only for the player who hosted this session — lets them keep
+  // sharing the join code with late-joining friends without having to
+  // remember it or back out to the menu.
+  hostJoinCode?: string;
 }
 
 type Screen = 'village' | 'playing' | 'gameover' | 'shop' | 'character' | 'controls' | 'outpost';
@@ -46,7 +50,7 @@ type Screen = 'village' | 'playing' | 'gameover' | 'shop' | 'character' | 'contr
 // screen orchestration but sources shared state (missions/cargo pool/party
 // wallet/discovery) from the network instead of localStorage, and keeps
 // solo play (DeadwakeGame.tsx) completely untouched by this feature.
-const CoopGame: React.FC<CoopGameProps> = ({ client, onLeave }) => {
+const CoopGame: React.FC<CoopGameProps> = ({ client, onLeave, hostJoinCode }) => {
   const session = useCoopSession(client);
   const [screen, setScreen] = useState<Screen>('village');
   const [currentVillageId, setCurrentVillageId] = useState('haven');
@@ -65,6 +69,7 @@ const CoopGame: React.FC<CoopGameProps> = ({ client, onLeave }) => {
   const [muted, setMutedState] = useState(() => isMuted());
   const [helloSent, setHelloSent] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [copiedHostCode, setCopiedHostCode] = useState(false);
 
   const holdRef = useRef<CargoItem[]>([]);
   holdRef.current = localHold;
@@ -200,6 +205,16 @@ const CoopGame: React.FC<CoopGameProps> = ({ client, onLeave }) => {
     if (gs.gameOver && !prevGameOverRef.current) sfxCrash();
     prevGameOverRef.current = gs.gameOver;
   }, [gameState.coins, gameState.speedBoostTimer, gameState.ramKills, gameState.shotsFired, gameState.gameOver, screen]);
+
+  // A little fanfare whenever the party grows — skips the very first
+  // snapshot (everyone already in `session.players` when we connect) so it
+  // only fires for someone actually joining live, not our own arrival.
+  const prevPlayerCountRef = useRef<number | null>(null);
+  useEffect(() => {
+    const count = Object.keys(session.players).length;
+    if (prevPlayerCountRef.current !== null && count > prevPlayerCountRef.current) sfxPlayerJoined();
+    prevPlayerCountRef.current = count;
+  }, [session.players]);
 
   // Non-village mission progress — same trigger conditions as solo play, but
   // reports completion to the host instead of mutating missionState directly.
@@ -506,6 +521,20 @@ const CoopGame: React.FC<CoopGameProps> = ({ client, onLeave }) => {
           onOpenChange={setChatOpen}
           disabled={showPauseMenu || showCharacter || showControls || showSettings}
         />
+      )}
+
+      {hostJoinCode && screen === 'village' && (
+        <button
+          onClick={async () => {
+            sfxButtonClick();
+            try { await navigator.clipboard.writeText(hostJoinCode); setCopiedHostCode(true); setTimeout(() => setCopiedHostCode(false), 1500); } catch {}
+          }}
+          className="absolute top-3 right-3 z-20 pixel-border bg-card/90 px-2.5 py-1.5 flex items-center gap-2 hover:bg-card transition-colors"
+          title="Copy join code for late-joining friends"
+        >
+          <span className="font-display text-[6px] text-muted-foreground">CODE</span>
+          <span className="font-display text-xs text-primary tracking-widest">{copiedHostCode ? 'COPIED' : hostJoinCode}</span>
+        </button>
       )}
 
       {screen === 'playing' && !gameState.gameOver && (

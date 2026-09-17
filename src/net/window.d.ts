@@ -7,6 +7,7 @@ export interface FoundCoopHost {
   ip: string;
   port: number;
   name: string;
+  code: string;
 }
 
 declare global {
@@ -14,7 +15,7 @@ declare global {
     coop?: {
       isElectron: true;
       getLanIps: () => Promise<string[]>;
-      startHost: (port: number) => Promise<{ ok: boolean; port?: number; error?: string }>;
+      startHost: (port: number) => Promise<{ ok: boolean; port?: number; code?: string; error?: string }>;
       stopHost: () => Promise<{ ok: boolean }>;
       startDiscovery: (onFound: (host: FoundCoopHost) => void) => void;
       stopDiscovery: () => void;

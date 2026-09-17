@@ -149,6 +149,19 @@ export function sfxCannonFire() {
   playTone(90, 0.16, 'sawtooth', 0.14);
 }
 
+// A join code is ready to share — a bright, inviting little flourish.
+export function sfxCoopReady() {
+  playTone(659, 0.1, 'sine', 0.1);
+  setTimeout(() => playTone(880, 0.1, 'sine', 0.1), 80);
+  setTimeout(() => playTone(1108, 0.18, 'sine', 0.1), 160);
+}
+
+// Someone new joined the party — short and celebratory, distinct from any sea sfx.
+export function sfxPlayerJoined() {
+  playTone(523, 0.08, 'triangle', 0.09);
+  setTimeout(() => playTone(784, 0.14, 'triangle', 0.09), 70);
+}
+
 // Picking up trade goods at a Goods Post.
 export function sfxCargoPickup() {
   playTone(392, 0.07, 'triangle', 0.08);
