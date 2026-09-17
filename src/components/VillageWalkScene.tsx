@@ -56,6 +56,9 @@ interface Props {
   paused?: boolean;
   otherPlayers?: OtherPlayer[];
   onPositionUpdate?: (x: number, y: number, dir: FacingDir) => void;
+  // Resolved from Settings (see useDeviceMode) — defaults to true so a caller
+  // that hasn't been updated yet still gets touch controls rather than none.
+  showTouchControls?: boolean;
 }
 
 // Picks the most story-advanced dialogue an NPC currently has to offer.
@@ -95,6 +98,7 @@ function drawLabel(ctx: CanvasRenderingContext2D, text: string, x: number, y: nu
 const VillageWalkScene: React.FC<Props> = ({
   village, shop, missionState, profile, cargo, onSetSail, onShop, onMissionUpdate, onCargoUpdate, onDeliverCargo, isFirstVisit, onFirstVisitDone, onMilestone, onOpenChart,
   outposts = [], friendship, hiredNpcIds, onTalkedToNpc, onHireCaptain, paused, otherPlayers, onPositionUpdate,
+  showTouchControls = true,
 }) => {
   const currentAct = getCurrentAct(missionState);
   const boatSkin = BOAT_SKINS.find(s => s.id === shop.selectedSkin) || BOAT_SKINS[0];
@@ -455,11 +459,15 @@ const VillageWalkScene: React.FC<Props> = ({
 
       {/* Controls hint */}
       <div className="mt-16 font-body text-sm text-muted-foreground text-center px-4">
-        Move: WASD / Arrows &nbsp;·&nbsp; Interact: E / Space
+        {showTouchControls
+          ? <>Move: D-pad &nbsp;·&nbsp; Interact: E button</>
+          : <>Move: WASD / Arrows &nbsp;·&nbsp; Interact: E / Space</>}
       </div>
 
-      {/* Touch dpad (mobile) */}
-      <TouchDpad inputRef={inputRef} onInteract={() => nearbyRef.current && handleInteract(nearbyRef.current)} canInteract={!!nearby} />
+      {/* Touch dpad — shown per the resolved device mode from Settings */}
+      {showTouchControls && (
+        <TouchDpad inputRef={inputRef} onInteract={() => nearbyRef.current && handleInteract(nearbyRef.current)} canInteract={!!nearby} />
+      )}
 
       {/* Dialogue */}
       {dialogue && (
@@ -672,7 +680,7 @@ const TouchDpad: React.FC<{
   const set = (k: 'up' | 'down' | 'left' | 'right', v: boolean) => { inputRef.current[k] = v; };
   const btn = "w-12 h-12 pixel-border bg-card/80 active:bg-primary/40 font-display text-primary text-sm flex items-center justify-center select-none touch-none";
   return (
-    <div className="absolute bottom-4 left-0 right-0 z-30 flex justify-between items-end px-4 md:hidden pointer-events-none">
+    <div className="absolute bottom-4 left-0 right-0 z-30 flex justify-between items-end px-4 pointer-events-none">
       <div className="pointer-events-auto grid grid-cols-3 gap-1 w-40">
         <div />
         <button className={btn} onPointerDown={() => set('up', true)} onPointerUp={() => set('up', false)} onPointerLeave={() => set('up', false)}>▲</button>

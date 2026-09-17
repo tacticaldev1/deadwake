@@ -9,7 +9,7 @@ import { OutpostState, loadOutposts, saveOutposts, outpostCost, foundNewOutpost 
 import { getEmpireRank } from '../game/empireRank';
 import {
   resumeAudio, sfxCollectCoin, sfxCollectCrate, sfxBoost, sfxCrash, startAmbient, stopAmbient, isMuted, setMuted,
-  sfxRamHit, sfxMissionComplete, sfxMissionFail, sfxDock, sfxDiscovery, sfxEnding, sfxPauseToggle, sfxButtonClick,
+  sfxRamHit, sfxCannonFire, sfxMissionComplete, sfxMissionFail, sfxDock, sfxDiscovery, sfxEnding, sfxPauseToggle, sfxButtonClick,
 } from '../game/sfx';
 import { PlayerProfile, loadProfile, saveProfile } from '../game/profile';
 import { CargoState, loadCargoState, saveCargoState, dropOffCargo, loseCargoAtSea } from '../game/cargo';
@@ -35,6 +35,10 @@ import ChartOverlay from '../components/ChartOverlay';
 import PauseMenu from '../components/PauseMenu';
 import CharacterScreen from '../components/CharacterScreen';
 import ControlsScreen from '../components/ControlsScreen';
+import SettingsScreen from '../components/SettingsScreen';
+import TouchSteering from '../components/TouchSteering';
+import { loadSettings, saveSettings, GameSettings } from '../game/settings';
+import { useDeviceMode } from '../hooks/use-device-mode';
 
 type Screen = GameScreen | 'village' | 'outpost';
 
@@ -65,6 +69,9 @@ const DeadwakeGame: React.FC<DeadwakeGameProps> = ({ onEnterCoop }) => {
   const [showPauseMenu, setShowPauseMenu] = useState(false);
   const [showCharacter, setShowCharacter] = useState(false);
   const [showControls, setShowControls] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState<GameSettings>(() => loadSettings());
+  const [gamepadConnected, setGamepadConnected] = useState(false);
   const [muted, setMutedState] = useState(() => isMuted());
   const [missionNotice, setMissionNotice] = useState<string | null>(null);
   const [profile, setProfile] = useState<PlayerProfile>(() => loadProfile());
@@ -79,9 +86,17 @@ const DeadwakeGame: React.FC<DeadwakeGameProps> = ({ onEnterCoop }) => {
   // Xbox / PS4 / PS5 controller support — translated into the same synthetic key
   // events the keyboard already drives, so every input handler works unchanged.
   useGamepad(useCallback((connected: boolean) => {
+    setGamepadConnected(connected);
     setMissionNotice(connected ? 'CONTROLLER CONNECTED' : 'CONTROLLER DISCONNECTED');
     setTimeout(() => setMissionNotice(null), 2500);
   }, []));
+
+  const resolvedDevice = useDeviceMode(gamepadConnected, settings.deviceMode);
+
+  const handleSettingsUpdate = useCallback((next: GameSettings) => {
+    setSettings(next);
+    saveSettings(next);
+  }, []);
 
   // Keep the last village visited persisted across sessions.
   const setCurrentVillageId = useCallback((id: string) => {
@@ -165,7 +180,7 @@ const DeadwakeGame: React.FC<DeadwakeGameProps> = ({ onEnterCoop }) => {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const missionTarget = activeMissionDuringPlay?.target || null;
-  const { gameState, startGame, stopGame, setPaused } = useGameLoop(canvasRef, missionTarget, discovery.discovered);
+  const { gameState, startGame, stopGame, setPaused, inputRef } = useGameLoop(canvasRef, missionTarget, discovery.discovered);
 
   const boatSkin = BOAT_SKINS.find(s => s.id === shop.selectedSkin) || BOAT_SKINS[0];
   const currentVillage = getVillage(currentVillageId, outposts.outposts) || VILLAGES[0];
@@ -183,6 +198,7 @@ const DeadwakeGame: React.FC<DeadwakeGameProps> = ({ onEnterCoop }) => {
   const prevBoostRef = useRef(false);
   const prevGameOverRef = useRef(false);
   const prevRamKillsRef = useRef(0);
+  const prevShotsFiredRef = useRef(0);
 
   // Audio hooks
   useEffect(() => {
@@ -197,9 +213,11 @@ const DeadwakeGame: React.FC<DeadwakeGameProps> = ({ onEnterCoop }) => {
     prevBoostRef.current = gs.speedBoostTimer > 0;
     if (gs.ramKills > prevRamKillsRef.current) sfxRamHit();
     prevRamKillsRef.current = gs.ramKills;
+    if (gs.shotsFired > prevShotsFiredRef.current) sfxCannonFire();
+    prevShotsFiredRef.current = gs.shotsFired;
     if (gs.gameOver && !prevGameOverRef.current) sfxCrash();
     prevGameOverRef.current = gs.gameOver;
-  }, [gameState.coins, gameState.speedBoostTimer, gameState.ramKills, gameState.gameOver, screen]);
+  }, [gameState.coins, gameState.speedBoostTimer, gameState.ramKills, gameState.shotsFired, gameState.gameOver, screen]);
 
   // Non-village mission progress (collect/survive)
   useEffect(() => {
@@ -349,28 +367,29 @@ const DeadwakeGame: React.FC<DeadwakeGameProps> = ({ onEnterCoop }) => {
 
   // Keyboard: E to dock
   useEffect(() => {
-    if (screen !== 'playing' || showPauseMenu || showCharacter || showControls) return;
+    if (screen !== 'playing' || showPauseMenu || showCharacter || showControls || showSettings) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === 'e' && dockableVillage) dockAtVillage(dockableVillage);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [screen, showPauseMenu, showCharacter, showControls, dockableVillage, dockAtVillage]);
+  }, [screen, showPauseMenu, showCharacter, showControls, showSettings, dockableVillage, dockAtVillage]);
 
   // Keyboard: M to toggle the full chart
   useEffect(() => {
-    if (screen !== 'playing' || showPauseMenu || showCharacter || showControls) return;
+    if (screen !== 'playing' || showPauseMenu || showCharacter || showControls || showSettings) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === 'm') setShowChart(s => !s);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [screen, showPauseMenu, showCharacter, showControls]);
+  }, [screen, showPauseMenu, showCharacter, showControls, showSettings]);
 
-  // Keyboard: ESC closes the controls/character screen or chart if open, otherwise toggles the pause menu
+  // Keyboard: ESC closes the controls/character/settings screen or chart if open, otherwise toggles the pause menu
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() !== 'escape') return;
+      if (showSettings) { setShowSettings(false); return; }
       if (showControls) { setShowControls(false); return; }
       if (showCharacter) { setShowCharacter(false); return; }
       if (screen === 'playing' && showChart) { setShowChart(false); return; }
@@ -378,12 +397,12 @@ const DeadwakeGame: React.FC<DeadwakeGameProps> = ({ onEnterCoop }) => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [screen, showChart, showCharacter, showControls]);
+  }, [screen, showChart, showCharacter, showControls, showSettings]);
 
   // Freeze the simulation (without resetting it) while paused or customizing during a voyage
   useEffect(() => {
-    if (screen === 'playing') setPaused(showPauseMenu || showCharacter || showControls);
-  }, [showPauseMenu, showCharacter, showControls, screen, setPaused]);
+    if (screen === 'playing') setPaused(showPauseMenu || showCharacter || showControls || showSettings);
+  }, [showPauseMenu, showCharacter, showControls, showSettings, screen, setPaused]);
 
   // Flow: Menu → House (first voyage ever, only) → village
   const handlePlay = useCallback(() => {
@@ -410,6 +429,8 @@ const DeadwakeGame: React.FC<DeadwakeGameProps> = ({ onEnterCoop }) => {
     prevCoinsRef.current = 0;
     prevBoostRef.current = false;
     prevGameOverRef.current = false;
+    prevRamKillsRef.current = 0;
+    prevShotsFiredRef.current = 0;
     setActiveMissionDuringPlay(mission || null);
     setLastDockedVillageId(currentVillageId);
     setScreen('playing');
@@ -435,6 +456,8 @@ const DeadwakeGame: React.FC<DeadwakeGameProps> = ({ onEnterCoop }) => {
     prevCoinsRef.current = 0;
     prevBoostRef.current = false;
     prevGameOverRef.current = false;
+    prevRamKillsRef.current = 0;
+    prevShotsFiredRef.current = 0;
     setScreen('playing');
     setTimeout(() => {
       const { x, y } = spawnPointForVillage(currentVillageId);
@@ -496,6 +519,11 @@ const DeadwakeGame: React.FC<DeadwakeGameProps> = ({ onEnterCoop }) => {
   const handleOpenControls = useCallback(() => {
     setShowPauseMenu(false);
     setShowControls(true);
+  }, []);
+
+  const handleOpenSettings = useCallback(() => {
+    setShowPauseMenu(false);
+    setShowSettings(true);
   }, []);
 
   const handleProfileUpdate = useCallback((next: PlayerProfile) => {
@@ -625,7 +653,7 @@ const DeadwakeGame: React.FC<DeadwakeGameProps> = ({ onEnterCoop }) => {
 
       {screen === 'menu' && (
         <MainMenu onPlay={handlePlay} onShop={() => setScreen('shop')} onCharacter={() => setShowCharacter(true)}
-          onControls={() => setShowControls(true)} onCoop={() => onEnterCoop?.()}
+          onControls={() => setShowControls(true)} onSettings={() => setShowSettings(true)} onCoop={() => onEnterCoop?.()}
           highScore={shop.highScore} coins={shop.coins} playerName={profile.name} empireRank={empireRank} />
       )}
 
@@ -654,7 +682,8 @@ const DeadwakeGame: React.FC<DeadwakeGameProps> = ({ onEnterCoop }) => {
           hiredNpcIds={hiredNpcIds}
           onTalkedToNpc={handleTalkedToNpc}
           onHireCaptain={handleHireCaptain}
-          paused={showPauseMenu || showCharacter || showControls}
+          paused={showPauseMenu || showCharacter || showControls || showSettings}
+          showTouchControls={resolvedDevice === 'touch'}
         />
       )}
 
@@ -690,6 +719,7 @@ const DeadwakeGame: React.FC<DeadwakeGameProps> = ({ onEnterCoop }) => {
           {showChart && (
             <ChartOverlay state={gameState} discoveredIds={discovery.discovered} onClose={() => setShowChart(false)} extraVillages={outposts.outposts} />
           )}
+          {resolvedDevice === 'touch' && <TouchSteering inputRef={inputRef} />}
         </>
       )}
 
@@ -709,6 +739,7 @@ const DeadwakeGame: React.FC<DeadwakeGameProps> = ({ onEnterCoop }) => {
           onReturnHome={screen === 'playing' || currentVillageId !== 'haven' ? handlePauseReturnHome : undefined}
           onCharacter={handleOpenCharacter}
           onControls={handleOpenControls}
+          onSettings={handleOpenSettings}
           onMainMenu={handlePauseMainMenu}
         />
       )}
@@ -719,6 +750,16 @@ const DeadwakeGame: React.FC<DeadwakeGameProps> = ({ onEnterCoop }) => {
 
       {showControls && (
         <ControlsScreen onClose={() => setShowControls(false)} boatSkin={boatSkin} />
+      )}
+
+      {showSettings && (
+        <SettingsScreen
+          settings={settings}
+          onUpdate={handleSettingsUpdate}
+          resolvedDevice={resolvedDevice}
+          gamepadConnected={gamepadConnected}
+          onClose={() => setShowSettings(false)}
+        />
       )}
 
       {screen === 'gameover' && (

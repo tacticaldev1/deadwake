@@ -14,6 +14,17 @@
   <meta name="twitter:title" content="Deadwake — Inherit the Tide">
   <meta property="og:description" content="A narrative sailing game. Inherit your father&#39;s boat, uncover hidden routes, and decide the fate of the sea.">
   <meta name="twitter:description" content="A narrative sailing game. Inherit your father&#39;s boat, uncover hidden routes, and decide the fate of the sea.">
+
+  <!-- PWA: installable on iPhone/Android (and any desktop browser) as a standalone app -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0a0e14">
+  <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <!-- iOS ignores the web manifest for icon/name/status-bar — these tags are the actual source of truth there -->
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Deadwake">
 </head>
 
   <body>

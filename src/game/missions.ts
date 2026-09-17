@@ -20,7 +20,7 @@ export interface Mission {
   surviveCurrent?: number;
   // For race missions — must dock at toVillage before this many seconds elapse
   raceTimeLimit?: number;
-  // For hunt missions — sink enemy boats by ramming them while boosted
+  // For hunt missions — sink enemy boats, by ramming while boosted or by cannon fire
   huntGoal?: number;
   huntCurrent?: number;
   onCompleteDialogue?: string;
@@ -123,7 +123,7 @@ export const ACT1_MISSIONS: Mission[] = [
   {
     id: 'hunt_wakes',
     title: 'Clear the Wakes',
-    description: 'Dark boats prowl these waters. Hit the speed boost, then ram 3 of them to scatter the pack.',
+    description: 'Dark boats prowl these waters. Ram them while boosted, or fire the cannon, to sink 3 and scatter the pack.',
     type: 'hunt',
     status: 'available',
     reward: { coins: 50 },
@@ -363,7 +363,7 @@ function generateFillerMission(villageId: string, extra: Village[] = []): Missio
       const goal = randomInt(2, 5);
       return {
         ...base, type, title: pick(HUNT_TITLES),
-        description: `Dark boats prowl these waters. Hit the speed boost, then ram ${goal} of them to scatter the pack.`,
+        description: `Dark boats prowl these waters. Ram them while boosted, or fire the cannon, to sink ${goal} and scatter the pack.`,
         reward: { coins: goal * 16 + randomInt(0, 10) },
         huntGoal: goal, huntCurrent: 0,
       };

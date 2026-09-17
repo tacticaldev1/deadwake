@@ -16,14 +16,29 @@ type Tab = 'host' | 'join';
 // disconnect (app crash, network drop, laptop sleep).
 const HOST_STALE_MS = 5000;
 
+// Remembering the last address/port means a friend group that plays together
+// regularly never has to re-type or re-share it after the first session.
+const LAST_JOIN_KEY = 'deadwake_coop_last_join';
+const LAST_PORT_KEY = 'deadwake_coop_last_port';
+
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const CoopMenu: React.FC<CoopMenuProps> = ({ onConnected, onBack }) => {
   const [tab, setTab] = useState<Tab>('host');
-  const [port, setPort] = useState(String(DEFAULT_COOP_PORT));
+  const [port, setPort] = useState(() => localStorage.getItem(LAST_PORT_KEY) || String(DEFAULT_COOP_PORT));
   const [lanIps, setLanIps] = useState<string[]>([]);
-  const [joinAddress, setJoinAddress] = useState('');
+  const [joinAddress, setJoinAddress] = useState(() => localStorage.getItem(LAST_JOIN_KEY) || '');
   const [foundHosts, setFoundHosts] = useState<Record<string, FoundCoopHost & { lastSeen: number }>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [copiedIp, setCopiedIp] = useState<string | null>(null);
   const isElectron = typeof window !== 'undefined' && !!window.coop;
 
   useEffect(() => {
@@ -58,6 +73,7 @@ const CoopMenu: React.FC<CoopMenuProps> = ({ onConnected, onBack }) => {
     setBusy(true);
     setError(null);
     sfxButtonClick();
+    localStorage.setItem(LAST_PORT_KEY, port);
     const result = await window.coop.startHost(parseInt(port, 10) || DEFAULT_COOP_PORT);
     if (!result.ok) {
       setError(result.error || 'Could not start hosting.');
@@ -69,13 +85,30 @@ const CoopMenu: React.FC<CoopMenuProps> = ({ onConnected, onBack }) => {
   };
 
   const joinHost = (address?: string) => {
-    const [ip, portStr] = (address ?? joinAddress).split(':');
+    const full = address ?? joinAddress;
+    const [ip, portStr] = full.split(':');
     if (!ip) { setError('Enter the host\'s address, like 192.168.1.20:7777'); return; }
     setBusy(true);
     setError(null);
     sfxButtonClick();
+    localStorage.setItem(LAST_JOIN_KEY, full);
     const client = new NetClient(`ws://${ip}:${portStr || DEFAULT_COOP_PORT}`);
     attachAndConnect(client);
+  };
+
+  const pasteAddress = async () => {
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (text) { setJoinAddress(text); setError(null); }
+    } catch {
+      setError('Could not read the clipboard — paste manually instead.');
+    }
+  };
+
+  const copyAddress = async (ip: string) => {
+    const ok = await copyToClipboard(`${ip}:${port}`);
+    if (ok) { setCopiedIp(ip); setTimeout(() => setCopiedIp(null), 1500); }
+    else setError('Could not copy — select and copy the address manually.');
   };
 
   const attachAndConnect = (client: NetClient) => {
@@ -122,7 +155,15 @@ const CoopMenu: React.FC<CoopMenuProps> = ({ onConnected, onBack }) => {
               <div className="pixel-border bg-secondary/20 p-3">
                 <div className="font-display text-[7px] text-muted-foreground mb-1">GIVE FRIENDS THIS ADDRESS</div>
                 {lanIps.map(ip => (
-                  <div key={ip} className="font-body text-base text-foreground">{ip}:{port}</div>
+                  <div key={ip} className="flex items-center justify-between gap-2">
+                    <span className="font-body text-base text-foreground">{ip}:{port}</span>
+                    <button
+                      onClick={() => copyAddress(ip)}
+                      className="font-display text-[7px] px-2 py-1 pixel-btn bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border shrink-0"
+                    >
+                      {copiedIp === ip ? 'COPIED' : 'COPY'}
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -163,8 +204,16 @@ const CoopMenu: React.FC<CoopMenuProps> = ({ onConnected, onBack }) => {
               <label className="font-display text-[7px] text-muted-foreground block mb-1">
                 {isElectron ? "OR ENTER ADDRESS MANUALLY" : 'HOST ADDRESS'}
               </label>
-              <input type="text" value={joinAddress} onChange={e => setJoinAddress(e.target.value)} placeholder="192.168.1.20:7777"
-                className="w-full bg-muted/50 border-2 border-border px-2 py-1 font-body text-sm text-foreground outline-none focus:border-primary" />
+              <div className="flex gap-1.5">
+                <input type="text" value={joinAddress} onChange={e => setJoinAddress(e.target.value)} placeholder="192.168.1.20:7777"
+                  className="flex-1 min-w-0 bg-muted/50 border-2 border-border px-2 py-1 font-body text-sm text-foreground outline-none focus:border-primary" />
+                <button
+                  onClick={pasteAddress}
+                  className="font-display text-[7px] px-2 pixel-btn bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border shrink-0"
+                >
+                  PASTE
+                </button>
+              </div>
             </div>
             <button onClick={() => joinHost()} disabled={busy}
               className="w-full py-3 bg-primary text-primary-foreground font-display text-[10px] pixel-btn hover:bg-primary/80 disabled:opacity-50">

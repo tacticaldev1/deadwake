@@ -14,7 +14,7 @@ import { BOAT_SKINS, SAIL_STYLES, TRAIL_EFFECTS, SPEED_UPGRADES } from '../game/
 import { getEmpireRank } from '../game/empireRank';
 import { PlayerProfile, loadProfile, saveProfile } from '../game/profile';
 import {
-  resumeAudio, sfxCollectCoin, sfxCollectCrate, sfxBoost, sfxCrash, sfxDock, sfxPauseToggle,
+  resumeAudio, sfxCollectCoin, sfxCollectCrate, sfxBoost, sfxCrash, sfxRamHit, sfxCannonFire, sfxDock, sfxPauseToggle,
   startAmbient, stopAmbient, isMuted, setMuted,
 } from '../game/sfx';
 import VillageWalkScene, { OtherPlayer } from '../components/VillageWalkScene';
@@ -28,8 +28,12 @@ import FoundOutpostModal from '../components/FoundOutpostModal';
 import PauseMenu from '../components/PauseMenu';
 import CharacterScreen from '../components/CharacterScreen';
 import ControlsScreen from '../components/ControlsScreen';
+import SettingsScreen from '../components/SettingsScreen';
+import TouchSteering from '../components/TouchSteering';
 import CoopPlayersList from '../components/CoopPlayersList';
 import CoopChat from '../components/CoopChat';
+import { loadSettings, saveSettings, GameSettings } from '../game/settings';
+import { useDeviceMode } from '../hooks/use-device-mode';
 
 interface CoopGameProps {
   client: NetClient;
@@ -55,6 +59,9 @@ const CoopGame: React.FC<CoopGameProps> = ({ client, onLeave }) => {
   const [showPauseMenu, setShowPauseMenu] = useState(false);
   const [showCharacter, setShowCharacter] = useState(false);
   const [showControls, setShowControls] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState<GameSettings>(() => loadSettings());
+  const [gamepadConnected, setGamepadConnected] = useState(false);
   const [muted, setMutedState] = useState(() => isMuted());
   const [helloSent, setHelloSent] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -68,6 +75,7 @@ const CoopGame: React.FC<CoopGameProps> = ({ client, onLeave }) => {
   const prevBoostRef = useRef(false);
   const prevGameOverRef = useRef(false);
   const prevRamKillsRef = useRef(0);
+  const prevShotsFiredRef = useRef(0);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const missionTarget = session.missionState.activeMission?.target || null;
@@ -79,8 +87,14 @@ const CoopGame: React.FC<CoopGameProps> = ({ client, onLeave }) => {
   // effective skin directly so sailing physics reflect what was actually
   // bought, not whatever this PC's solo save happens to contain.
   const effectiveSkin = speedUpgrade.speedMod === 1 ? boatSkin : { ...boatSkin, speedMod: boatSkin.speedMod * speedUpgrade.speedMod };
-  const { gameState, startGame, stopGame, setPaused } = useGameLoop(canvasRef, missionTarget, session.discovered, effectiveSkin);
-  useGamepad();
+  const { gameState, startGame, stopGame, setPaused, inputRef } = useGameLoop(canvasRef, missionTarget, session.discovered, effectiveSkin);
+  useGamepad(useCallback((connected: boolean) => setGamepadConnected(connected), []));
+  const resolvedDevice = useDeviceMode(gamepadConnected, settings.deviceMode);
+
+  const handleSettingsUpdate = useCallback((next: GameSettings) => {
+    setSettings(next);
+    saveSettings(next);
+  }, []);
 
   // useGameLoop hands back a brand-new gameState object every single animation
   // frame (60/sec). Effects below must NOT depend on gameState directly — a
@@ -179,10 +193,13 @@ const CoopGame: React.FC<CoopGameProps> = ({ client, onLeave }) => {
     prevCoinsRef.current = gs.coins;
     if (gs.speedBoostTimer > 0 && !prevBoostRef.current) sfxBoost();
     prevBoostRef.current = gs.speedBoostTimer > 0;
-    if (gs.ramKills > prevRamKillsRef.current) prevRamKillsRef.current = gs.ramKills;
+    if (gs.ramKills > prevRamKillsRef.current) sfxRamHit();
+    prevRamKillsRef.current = gs.ramKills;
+    if (gs.shotsFired > prevShotsFiredRef.current) sfxCannonFire();
+    prevShotsFiredRef.current = gs.shotsFired;
     if (gs.gameOver && !prevGameOverRef.current) sfxCrash();
     prevGameOverRef.current = gs.gameOver;
-  }, [gameState.coins, gameState.speedBoostTimer, gameState.ramKills, gameState.gameOver, screen]);
+  }, [gameState.coins, gameState.speedBoostTimer, gameState.ramKills, gameState.shotsFired, gameState.gameOver, screen]);
 
   // Non-village mission progress — same trigger conditions as solo play, but
   // reports completion to the host instead of mutating missionState directly.
@@ -273,14 +290,14 @@ const CoopGame: React.FC<CoopGameProps> = ({ client, onLeave }) => {
   const handleSetSail = useCallback(() => {
     resumeAudio();
     startAmbient();
-    prevCoinsRef.current = 0; prevBoostRef.current = false; prevGameOverRef.current = false; prevRamKillsRef.current = 0;
+    prevCoinsRef.current = 0; prevBoostRef.current = false; prevGameOverRef.current = false; prevRamKillsRef.current = 0; prevShotsFiredRef.current = 0;
     setLastDockedVillageId(currentVillageId);
     setScreen('playing');
     setTimeout(() => { const { x, y } = spawnPointForVillage(currentVillageId); startGame(x, y); }, 100);
   }, [currentVillageId, spawnPointForVillage, startGame]);
 
   const handleRestart = useCallback(() => {
-    prevCoinsRef.current = 0; prevBoostRef.current = false; prevGameOverRef.current = false; prevRamKillsRef.current = 0;
+    prevCoinsRef.current = 0; prevBoostRef.current = false; prevGameOverRef.current = false; prevRamKillsRef.current = 0; prevShotsFiredRef.current = 0;
     setScreen('playing');
     setTimeout(() => { const { x, y } = spawnPointForVillage(currentVillageId); startGame(x, y); }, 100);
   }, [currentVillageId, spawnPointForVillage, startGame]);
@@ -361,6 +378,7 @@ const CoopGame: React.FC<CoopGameProps> = ({ client, onLeave }) => {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() !== 'escape') return;
+      if (showSettings) { setShowSettings(false); return; }
       if (showCharacter) { setShowCharacter(false); return; }
       if (showControls) { setShowControls(false); return; }
       sfxPauseToggle();
@@ -368,11 +386,11 @@ const CoopGame: React.FC<CoopGameProps> = ({ client, onLeave }) => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [showCharacter, showControls]);
+  }, [showCharacter, showControls, showSettings]);
 
   useEffect(() => {
-    if (screen === 'playing') setPaused(showPauseMenu || showCharacter || showControls || chatOpen);
-  }, [showPauseMenu, showCharacter, showControls, chatOpen, screen, setPaused]);
+    if (screen === 'playing') setPaused(showPauseMenu || showCharacter || showControls || showSettings || chatOpen);
+  }, [showPauseMenu, showCharacter, showControls, showSettings, chatOpen, screen, setPaused]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -463,9 +481,10 @@ const CoopGame: React.FC<CoopGameProps> = ({ client, onLeave }) => {
           hiredNpcIds={hiredNpcIds}
           onTalkedToNpc={handleTalkedToNpc}
           onHireCaptain={handleHireCaptain}
-          paused={showPauseMenu || showCharacter || showControls || chatOpen}
+          paused={showPauseMenu || showCharacter || showControls || showSettings || chatOpen}
           otherPlayers={otherPlayersInVillage}
           onPositionUpdate={(x, y, dir) => sendIntent({ type: 'POSITION_UPDATE', villageId: currentVillageId, x, y, angle: dirToAngle(dir) })}
+          showTouchControls={resolvedDevice === 'touch'}
         />
       )}
 
@@ -485,7 +504,7 @@ const CoopGame: React.FC<CoopGameProps> = ({ client, onLeave }) => {
           entries={session.chatLog}
           onSend={text => sendIntent({ type: 'CHAT', text })}
           onOpenChange={setChatOpen}
-          disabled={showPauseMenu || showCharacter || showControls}
+          disabled={showPauseMenu || showCharacter || showControls || showSettings}
         />
       )}
 
@@ -496,6 +515,7 @@ const CoopGame: React.FC<CoopGameProps> = ({ client, onLeave }) => {
           <MiniMap state={gameState} discoveredIds={session.discovered} peers={peersAtSea} extraVillages={session.outposts} />
           <CoopPlayersList players={session.players} selfId={session.selfId} empireRank={empireRank} />
           {dockableVillage && <DockPrompt village={dockableVillage} onDock={() => dockAtVillage(dockableVillage)} />}
+          {resolvedDevice === 'touch' && <TouchSteering inputRef={inputRef} />}
         </>
       )}
 
@@ -531,12 +551,22 @@ const CoopGame: React.FC<CoopGameProps> = ({ client, onLeave }) => {
           onAbandonVoyage={screen === 'playing' ? () => { setShowPauseMenu(false); handleReturnToVillage(); } : undefined}
           onCharacter={() => { setShowPauseMenu(false); setShowCharacter(true); }}
           onControls={() => { setShowPauseMenu(false); setShowControls(true); }}
+          onSettings={() => { setShowPauseMenu(false); setShowSettings(true); }}
           onMainMenu={() => { setShowPauseMenu(false); if (screen === 'playing') bankVoyageCoins(); stopGame(); stopAmbient(); client.close(); onLeave(); }}
         />
       )}
 
       {showCharacter && <CharacterScreen profile={profile} onUpdate={handleProfileUpdate} onClose={() => setShowCharacter(false)} />}
       {showControls && <ControlsScreen onClose={() => setShowControls(false)} boatSkin={boatSkin} />}
+      {showSettings && (
+        <SettingsScreen
+          settings={settings}
+          onUpdate={handleSettingsUpdate}
+          resolvedDevice={resolvedDevice}
+          gamepadConnected={gamepadConnected}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 // PS4/PS5 controllers both report as when the browser recognizes them as a
 // "standard" gamepad (true for every current Xbox and PlayStation pad).
 const BTN_CONFIRM = 0;   // Xbox A / PlayStation Cross — interact, dock, talk
+const BTN_FIRE = 2;      // Xbox X / PlayStation Square — fire the cannon
 const BTN_CHART = 3;     // Xbox Y / PlayStation Triangle — toggle the chart
 const BTN_START = 9;     // Xbox Menu / PlayStation Options — pause menu
 const BTN_DPAD_UP = 12;
@@ -13,8 +14,8 @@ const BTN_DPAD_RIGHT = 15;
 
 const STICK_DEADZONE = 0.35;
 
-type HeldKey = 'w' | 'a' | 's' | 'd' | 'e';
-const HELD_KEYS: HeldKey[] = ['w', 'a', 's', 'd', 'e'];
+type HeldKey = 'w' | 'a' | 's' | 'd' | 'e' | ' ';
+const HELD_KEYS: HeldKey[] = ['w', 'a', 's', 'd', 'e', ' '];
 
 function dispatchKey(type: 'keydown' | 'keyup', key: string) {
   window.dispatchEvent(new KeyboardEvent(type, { key, bubbles: true }));
@@ -32,7 +33,7 @@ export function useGamepad(onConnectionChange?: (connected: boolean, name: strin
     if (typeof navigator.getGamepads !== 'function') return;
 
     let rafId: number;
-    const held: Record<HeldKey, boolean> = { w: false, a: false, s: false, d: false, e: false };
+    const held: Record<HeldKey, boolean> = { w: false, a: false, s: false, d: false, e: false, ' ': false };
     let startHeld = false;
     let chartHeld = false;
 
@@ -55,6 +56,7 @@ export function useGamepad(onConnectionChange?: (connected: boolean, name: strin
         setHeld('a', lx < -STICK_DEADZONE || !!pad.buttons[BTN_DPAD_LEFT]?.pressed);
         setHeld('d', lx > STICK_DEADZONE || !!pad.buttons[BTN_DPAD_RIGHT]?.pressed);
         setHeld('e', !!pad.buttons[BTN_CONFIRM]?.pressed);
+        setHeld(' ', !!pad.buttons[BTN_FIRE]?.pressed);
 
         // Start/Menu and Y/Triangle toggle state on the *press*, so fire once
         // per press-edge rather than continuously while held.

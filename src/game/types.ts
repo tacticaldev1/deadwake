@@ -83,6 +83,14 @@ export interface WakePoint {
   width: number;
 }
 
+export interface Projectile {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+}
+
 export interface WindState {
   direction: number;
   strength: number;
@@ -110,6 +118,8 @@ export interface GameState {
   collectibles: Collectible[];
   particles: Particle[];
   wakeTrail: WakePoint[];
+  projectiles: Projectile[];
+  cannonCooldown: number;
   cameraX: number;
   cameraY: number;
   cameraTargetX: number;
@@ -122,6 +132,10 @@ export interface GameState {
   event: 'none' | 'storm' | 'calm' | 'gust';
   eventTimer: number;
   ramKills: number;
+  // Fired-shot counter (not remaining ammo — cannon has no ammo limit) purely
+  // so callers can detect "a shot just went off" the same way they watch
+  // ramKills for "a kill just happened", without engine.ts owning audio.
+  shotsFired: number;
 }
 
 export interface ShopState {

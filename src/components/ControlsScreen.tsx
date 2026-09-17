@@ -13,7 +13,8 @@ const CONTROLS: { keys: string; action: string }[] = [
   { keys: '↑ ↓ ← →', action: 'Move / accelerate (alt.)' },
   { keys: 'Click + drag / touch', action: 'Steer toward cursor' },
   { keys: 'E', action: 'Dock, interact, talk' },
-  { keys: 'Space', action: 'Interact / talk (alt.)' },
+  { keys: 'Space (village)', action: 'Interact / talk (alt.)' },
+  { keys: 'Space (at sea)', action: 'Fire the bow cannon' },
   { keys: 'M', action: 'Open the captain\'s chart' },
   { keys: 'ESC', action: 'Pause menu' },
 ];
@@ -21,6 +22,7 @@ const CONTROLS: { keys: string; action: string }[] = [
 const GAMEPAD_CONTROLS: { keys: string; action: string }[] = [
   { keys: 'Left Stick / D-Pad', action: 'Move / accelerate' },
   { keys: 'A / Cross', action: 'Dock, interact, talk' },
+  { keys: 'X / Square', action: 'Fire the bow cannon' },
   { keys: 'Y / Triangle', action: 'Open the captain\'s chart' },
   { keys: 'Menu / Options', action: 'Pause menu' },
 ];

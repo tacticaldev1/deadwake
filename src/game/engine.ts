@@ -1,4 +1,4 @@
-import { GameState, Particle, Obstacle, Collectible, WindState, WakePoint } from './types';
+import { GameState, Particle, Obstacle, Collectible, WindState, WakePoint, Projectile } from './types';
 import { BoatSkin } from './types';
 import { VILLAGES, Village } from './villages';
 
@@ -11,16 +11,18 @@ export function createInitialState(startX = 0, startY = 0): GameState {
     velocity: { x: 0, y: 0 }, score: 0, coins: 0, distance: 0, gameOver: false,
     health: 3, maxHealth: 3, invulnTimer: 0, difficulty: 1,
     wind: { direction: -Math.PI / 4, strength: 0.5, targetDirection: -Math.PI / 4, targetStrength: 0.5 },
-    obstacles: [], collectibles: [], particles: [], wakeTrail: [],
+    obstacles: [], collectibles: [], particles: [], wakeTrail: [], projectiles: [],
     cameraX: startX, cameraY: startY, cameraTargetX: startX, cameraTargetY: startY,
     cameraZoom: 1, cameraTargetZoom: 1, time: 0,
     stormZone: { x: startX, y: startY - 2000, radius: 400, active: false },
     speedBoostTimer: 0, event: 'none', eventTimer: 0, ramKills: 0,
+    cannonCooldown: 0, shotsFired: 0,
   };
 }
 
 export interface InputState {
   up: boolean; down: boolean; left: boolean; right: boolean; mouseAngle: number | null;
+  fire?: boolean;
 }
 
 function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
@@ -51,6 +53,7 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
   s.obstacles = [...s.obstacles];
   s.collectibles = [...s.collectibles];
   s.wakeTrail = [...s.wakeTrail];
+  s.projectiles = [...s.projectiles];
 
   // Wind
   s.wind = { ...s.wind };
@@ -142,6 +145,35 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
   s.wakeTrail = s.wakeTrail.filter(w => { w.age += dt; return w.age < 2; });
   if (s.wakeTrail.length > 40) s.wakeTrail = s.wakeTrail.slice(-40);
 
+  // Bow cannon — fires forward along boatAngle, same aim as ramming, so
+  // there's no separate targeting scheme to learn. A short cooldown keeps
+  // it from being a hold-to-win button while still feeling snappy.
+  const CANNON_COOLDOWN = 0.35;
+  s.cannonCooldown = Math.max(0, s.cannonCooldown - dt);
+  if (input.fire && s.cannonCooldown <= 0) {
+    const CANNON_SPEED = 8.5;
+    const BOW_OFFSET = 18;
+    s.projectiles.push({
+      x: s.boatX + Math.cos(s.boatAngle) * BOW_OFFSET,
+      y: s.boatY + Math.sin(s.boatAngle) * BOW_OFFSET,
+      vx: Math.cos(s.boatAngle) * CANNON_SPEED + s.velocity.x,
+      vy: Math.sin(s.boatAngle) * CANNON_SPEED + s.velocity.y,
+      life: 0.85,
+    });
+    s.cannonCooldown = CANNON_COOLDOWN;
+    s.shotsFired += 1;
+    s.boatSpeed = Math.max(-1, s.boatSpeed - 0.12); // small recoil kick
+    for (let i = 0; i < 4; i++) {
+      const a = s.boatAngle + (Math.random() - 0.5) * 0.6;
+      s.particles.push({
+        x: s.boatX + Math.cos(s.boatAngle) * BOW_OFFSET, y: s.boatY + Math.sin(s.boatAngle) * BOW_OFFSET,
+        vx: Math.cos(a) * (0.5 + Math.random()), vy: Math.sin(a) * (0.5 + Math.random()),
+        life: 0.3, maxLife: 0.3, size: 2 + Math.random() * 2,
+        color: '#c9a86a', alpha: 1, type: 'splash',
+      });
+    }
+  }
+
   // Spawn obstacles
   const spawnDist = 800;
   if (Math.random() < 0.01 * s.difficulty) {
@@ -158,7 +190,10 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
       type, radius: 15 + Math.random() * 20,
       rotation: type === 'boat' ? moveAngle : Math.random() * Math.PI * 2,
       vx: Math.cos(moveAngle) * speed, vy: Math.sin(moveAngle) * speed,
-      health: type === 'boat' ? 1 : undefined,
+      // 2 HP: a boosted ram (2 dmg, see below) still sinks one in a single
+      // hit exactly like before; cannon fire (1 dmg/shot) takes two hits,
+      // giving it a real place alongside ramming instead of replacing it.
+      health: type === 'boat' ? 2 : undefined,
     });
   }
 
@@ -212,7 +247,7 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
 
     // Ramming: hitting an enemy boat while boosted sinks it instead of hurting the player.
     if (obs.type === 'boat' && s.speedBoostTimer > 0) {
-      obs.health = (obs.health ?? 1) - 1;
+      obs.health = (obs.health ?? 2) - 2;
       s.boatSpeed *= 0.85;
       for (let i = 0; i < 10; i++) {
         const a = Math.random() * Math.PI * 2;
@@ -252,6 +287,40 @@ export function updateGame(state: GameState, input: InputState, dt: number, skin
       if (s.health <= 0) { s.gameOver = true; break; }
     }
   }
+
+  // Cannonballs: move, expire, and check hits against solid obstacles.
+  // Rocks stop a shot (visually satisfying, no free pass-through) but only
+  // 'boat' obstacles take damage — a rock has no health to lose.
+  const spentProjectiles = new Set<Projectile>();
+  for (const p of s.projectiles) {
+    p.x += p.vx * dt * 60;
+    p.y += p.vy * dt * 60;
+    p.life -= dt;
+    if (p.life <= 0) { spentProjectiles.add(p); continue; }
+    for (const obs of s.obstacles) {
+      if (destroyedObstacles.has(obs) || obs.type === 'storm') continue;
+      if (dist(p.x, p.y, obs.x, obs.y) >= obs.radius + 4) continue;
+      spentProjectiles.add(p);
+      for (let i = 0; i < 6; i++) {
+        const a = Math.random() * Math.PI * 2;
+        s.particles.push({
+          x: p.x, y: p.y,
+          vx: Math.cos(a) * (0.5 + Math.random() * 2), vy: Math.sin(a) * (0.5 + Math.random() * 2),
+          life: 0.4, maxLife: 0.4, size: 2 + Math.random() * 2,
+          color: obs.type === 'boat' ? '#e8c368' : '#5a5a5a', alpha: 1, type: 'splash',
+        });
+      }
+      if (obs.type === 'boat') {
+        obs.health = (obs.health ?? 2) - 1;
+        if (obs.health <= 0) { destroyedObstacles.add(obs); s.ramKills += 1; }
+      }
+      break;
+    }
+  }
+  if (spentProjectiles.size > 0) {
+    s.projectiles = s.projectiles.filter(p => !spentProjectiles.has(p));
+  }
+
   if (destroyedObstacles.size > 0) {
     s.obstacles = s.obstacles.filter(o => !destroyedObstacles.has(o));
   }
@@ -319,6 +388,10 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, skin
 
   for (const obs of state.obstacles) {
     drawObstacle(ctx, obs, time);
+  }
+
+  for (const p of state.projectiles) {
+    drawProjectile(ctx, p);
   }
 
   // Particles behind boat
@@ -521,6 +594,19 @@ export function drawObstacle(ctx: CanvasRenderingContext2D, obs: Obstacle, time:
     }
     ctx.globalAlpha = 1;
   }
+  ctx.restore();
+}
+
+function drawProjectile(ctx: CanvasRenderingContext2D, p: Projectile) {
+  ctx.save();
+  ctx.translate(px(p.x), px(p.y));
+  // Small trailing smoke puff, then the ball itself — reads clearly at speed.
+  ctx.fillStyle = 'rgba(120,120,120,0.35)';
+  ctx.fillRect(px(-p.vx * 0.5) - 1, px(-p.vy * 0.5) - 1, 3, 3);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(-2, -2, 4, 4);
+  ctx.fillStyle = '#3a3a3a';
+  ctx.fillRect(-1, -1, 1, 1);
   ctx.restore();
 }
 

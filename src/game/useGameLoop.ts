@@ -12,7 +12,7 @@ import { BoatSkin } from './types';
 // to whatever this machine's solo save happens to contain.
 export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>, missionTarget?: { x: number; y: number; radius: number; label: string } | null, discoveredIds?: string[], skinOverride?: BoatSkin) {
   const stateRef = useRef<GameState>(createInitialState());
-  const inputRef = useRef<InputState>({ up: false, down: false, left: false, right: false, mouseAngle: null });
+  const inputRef = useRef<InputState>({ up: false, down: false, left: false, right: false, mouseAngle: null, fire: false });
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef(0);
   const [gameState, setGameState] = useState<GameState>(stateRef.current);
@@ -87,6 +87,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
       if (key === 's' || key === 'arrowdown') inputRef.current.down = true;
       if (key === 'a' || key === 'arrowleft') inputRef.current.left = true;
       if (key === 'd' || key === 'arrowright') inputRef.current.right = true;
+      if (key === ' ') { e.preventDefault(); inputRef.current.fire = true; }
     };
     const onUp = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
@@ -94,6 +95,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
       if (key === 's' || key === 'arrowdown') inputRef.current.down = false;
       if (key === 'a' || key === 'arrowleft') inputRef.current.left = false;
       if (key === 'd' || key === 'arrowright') inputRef.current.right = false;
+      if (key === ' ') inputRef.current.fire = false;
     };
     window.addEventListener('keydown', onDown);
     window.addEventListener('keyup', onUp);
@@ -138,5 +140,5 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     };
   }, [canvasRef]);
 
-  return { gameState, startGame, stopGame, setPaused };
+  return { gameState, startGame, stopGame, setPaused, inputRef };
 }

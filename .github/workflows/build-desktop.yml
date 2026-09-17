@@ -1,0 +1,54 @@
+name: Build desktop apps (Windows + Mac)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            script: electron:build
+            artifact: windows-build
+            glob: release/*.exe
+          - os: macos-latest
+            script: electron:build:mac
+            artifact: mac-build
+            glob: |
+              release/*.dmg
+              release/*.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # electron's own postinstall (which downloads its prebuilt binary into
+      # node_modules/electron/dist) has been observed not firing reliably on
+      # every npm ci — re-running it here is a harmless no-op if it already
+      # succeeded, and prevents an opaque "electronDist does not exist" failure
+      # in electron-builder if it didn't.
+      - run: node node_modules/electron/install.js
+      - run: npm run ${{ matrix.script }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.glob }}
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*

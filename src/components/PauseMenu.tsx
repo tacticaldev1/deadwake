@@ -10,10 +10,11 @@ interface PauseMenuProps {
   onReturnHome?: () => void;
   onCharacter: () => void;
   onControls: () => void;
+  onSettings: () => void;
   onMainMenu: () => void;
 }
 
-const PauseMenu: React.FC<PauseMenuProps> = ({ isSailing, muted, onResume, onToggleSound, onAbandonVoyage, onReturnHome, onCharacter, onControls, onMainMenu }) => {
+const PauseMenu: React.FC<PauseMenuProps> = ({ isSailing, muted, onResume, onToggleSound, onAbandonVoyage, onReturnHome, onCharacter, onControls, onSettings, onMainMenu }) => {
   const click = (fn: () => void) => () => { sfxButtonClick(); fn(); };
 
   return (
@@ -49,6 +50,13 @@ const PauseMenu: React.FC<PauseMenuProps> = ({ isSailing, muted, onResume, onTog
             className="px-4 py-3 bg-secondary text-secondary-foreground font-display text-[10px] pixel-btn transition-colors hover:bg-secondary/80 border border-border"
           >
             CONTROLS
+          </button>
+
+          <button
+            onClick={click(onSettings)}
+            className="px-4 py-3 bg-secondary text-secondary-foreground font-display text-[10px] pixel-btn transition-colors hover:bg-secondary/80 border border-border"
+          >
+            SETTINGS
           </button>
 
           {isSailing && onAbandonVoyage && (

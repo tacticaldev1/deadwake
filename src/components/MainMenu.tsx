@@ -6,6 +6,7 @@ interface MainMenuProps {
   onShop: () => void;
   onCharacter: () => void;
   onControls: () => void;
+  onSettings: () => void;
   onCoop: () => void;
   highScore: number;
   coins: number;
@@ -13,7 +14,7 @@ interface MainMenuProps {
   empireRank: string;
 }
 
-const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onCharacter, onControls, onCoop, highScore, coins, playerName, empireRank }) => {
+const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onCharacter, onControls, onSettings, onCoop, highScore, coins, playerName, empireRank }) => {
   const [flickerPhase, setFlickerPhase] = useState(0);
 
   useEffect(() => {
@@ -100,6 +101,13 @@ const MainMenu: React.FC<MainMenuProps> = ({ onPlay, onShop, onCharacter, onCont
             className="px-6 py-3 bg-secondary text-secondary-foreground font-display text-xs font-bold pixel-btn transition-colors hover:bg-secondary/80 border border-border"
           >
             CO-OP
+          </button>
+
+          <button
+            onClick={() => { sfxButtonClick(); onSettings(); }}
+            className="px-6 py-3 bg-secondary text-secondary-foreground font-display text-xs font-bold pixel-btn transition-colors hover:bg-secondary/80 border border-border"
+          >
+            SETTINGS
           </button>
         </div>
       </div>

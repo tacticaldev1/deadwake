@@ -143,6 +143,12 @@ export function sfxRamHit() {
   playTone(140, 0.14, 'square', 0.12);
 }
 
+// The bow cannon firing — a short, punchy boom distinct from a hull impact.
+export function sfxCannonFire() {
+  playNoise(0.12, 0.14);
+  playTone(90, 0.16, 'sawtooth', 0.14);
+}
+
 // Picking up trade goods at a Goods Post.
 export function sfxCargoPickup() {
   playTone(392, 0.07, 'triangle', 0.08);
