@@ -14,13 +14,14 @@
     "test:watch": "vitest",
     "electron:dev": "node electron/dev.mjs",
     "electron:build": "vite build && node electron/build.mjs && electron-builder --win portable",
-    "electron:build:mac": "vite build && node electron/build.mjs && electron-builder --mac zip"
+    "electron:build:mac": "vite build && node electron/build.mjs && electron-builder --mac dmg zip"
   },
   "build": {
     "appId": "com.deadwake.game",
     "productName": "Deadwake",
     "electronDist": "node_modules/electron/dist",
     "icon": "build/icon.png",
+    "publish": null,
     "files": [
       "dist/**/*",
       "dist-electron/**/*"
@@ -33,7 +34,7 @@
     },
     "mac": {
       "identity": null,
-      "target": ["zip"],
+      "target": ["dmg", "zip"],
       "category": "public.app-category.games"
     }
   },

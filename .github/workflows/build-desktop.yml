@@ -21,7 +21,9 @@ jobs:
           - os: macos-latest
             script: electron:build:mac
             artifact: mac-build
-            glob: release/*.zip
+            glob: |
+              release/*.dmg
+              release/*.zip
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
