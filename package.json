@@ -32,6 +32,7 @@
       "target": "portable"
     },
     "mac": {
+      "identity": null,
       "target": ["dmg", "zip"],
       "category": "public.app-category.games"
     }

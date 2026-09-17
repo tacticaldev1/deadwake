@@ -8,6 +8,10 @@ on:
 jobs:
   build:
     strategy:
+      # Without this, a failure in one matrix leg (e.g. the Mac build) cancels
+      # every other leg still running — the working Windows build would get
+      # killed for an unrelated Mac-only problem.
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
@@ -35,6 +39,13 @@ jobs:
       # in electron-builder if it didn't.
       - run: node node_modules/electron/install.js
       - run: npm run ${{ matrix.script }}
+        env:
+          # No Apple Developer certificate is configured — without this,
+          # electron-builder's codesigning identity auto-discovery on macOS
+          # can fail the build outright instead of just skipping signing.
+          # The resulting .app/.dmg is unsigned: macOS Gatekeeper will require
+          # a right-click → Open the first time it's launched.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
