@@ -14,7 +14,7 @@
     "test:watch": "vitest",
     "electron:dev": "node electron/dev.mjs",
     "electron:build": "vite build && node electron/build.mjs && electron-builder --win portable",
-    "electron:build:mac": "vite build && node electron/build.mjs && electron-builder --mac dmg zip"
+    "electron:build:mac": "vite build && node electron/build.mjs && electron-builder --mac zip"
   },
   "build": {
     "appId": "com.deadwake.game",
@@ -33,7 +33,7 @@
     },
     "mac": {
       "identity": null,
-      "target": ["dmg", "zip"],
+      "target": ["zip"],
       "category": "public.app-category.games"
     }
   },
